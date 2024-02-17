@@ -2,36 +2,50 @@ import tkinter as tk
 from tkinter import filedialog
 import serial.tools.list_ports
 import serial
+import math
+
+# def open_serial_port():
+#     try:
+#         for port in serial.tools.list_ports.comports():
+#             try:
+#                 print(f"Serial port {port.device} successfully opened")
+#             except serial.SerialException as e:
+#                 print(f"Error opening serial port {port.device}: {e}")
+#         print("Failed to open any serial port")
+#         return None
+#     except Exception as e:
+#         print(f"Error opening the serial port : {e}")
+#         return None
 
 
-def list_usb_devices():
-    usb_devices = []
-    for port in serial.tools.list_ports.comports():
-        if "USB" in port.description:
-            usb_devices.append(port)
-    return usb_devices
 
-usb_devices = list_usb_devices()
+# open_serial_port()
 
-if usb_devices:
-    print("USB Devices:")
-    for device in usb_devices:
-        print(f"  Port: {device.device}, Description: {device.description}")
-else:
-    print("No USB devices found.")
+# def list_usb_devices():
+#     for port in serial.tools.list_ports.comports():
+#         if "COM3" in port.description:
+#             usb = port.device
+#             return usb
+#     return usb
 
-def get_ports():
-    return [port.device for port in serial.tools.list_ports.comports()]
-print(get_ports())
+# usb_devices = list_usb_devices()
+
+# print(usb_devices)
+
+
+# def get_ports():
+#     return [port.device for port in serial.tools.list_ports.comports()]
 
 
 
 def get_usb_ports():
     for port in serial.tools.list_ports.comports():
-        if 'COM1' in port.description:
+        if 'COM4' in port.description:
+            print(port.device)
             return port.device
-    return None
-get_usb_ports()
+    return port.device
+
+
 
 def import_file(file_label):
     file_path = filedialog.askopenfilename()
@@ -49,9 +63,9 @@ def open_serial_port(baudrate):
         print(f"Error opening the serial port : {e}")
         return None
     
-def close_serial_port(ser):
-    if ser:
-        ser.close()
+# def close_serial_port(ser):
+#     if ser:
+#         ser.close()
         
         
 # def flash_firmware(ser, file_path):
@@ -61,7 +75,7 @@ def close_serial_port(ser):
 #     flash_firmware(ser, file_path)
 
 
-def flash_firmware(file_path, baudrate):
+def flash_firmware(file_path, baudrate,percentage_label):
     if not file_path:
         print("Please select a file")
         return
@@ -69,34 +83,101 @@ def flash_firmware(file_path, baudrate):
     try:
         with open(file_path, "rb") as f:
             file_data = f.read()
-            print(file_data)
     except FileNotFoundError:
         print(f"File {file_path} not found")
         return
 
     ser_port = get_usb_ports()
     if not ser_port:
-        print("COM1 port not found")
+        print("COM3 port not found")
         return
-
+    
+    
+    # ser = serial.Serial()
+    # ser.baudrate = 9600
+    # ser.port = "COM4"
+    # ser.open()
+    
+    
+    
+    # ser = serial.Serial(ser_port, baudrate)
+  
+    # print(ser)
+    
+    
     try:
         ser = serial.Serial(ser_port, baudrate)
+        ser.open()
+        print(ser)
     except Exception as e:
         print(f"Error opening the serial port: {e}")
         return
 
     frame_num = 1
-    total_frames = (len(file_data) + 5) // 6  # Calculate total frames needed
+    # print(frame_num)
+    
+    total_frames = math.ceil(len(file_data) / 7)
+    # print(total_frames)
+    # print(file_data)
+    arr_start = []
+    arr_end = []
+    arr_payload_data  = []
+    arr_sum_payload = []
+    arr_cal_check = []
+    arr_payload_checksum = []
 
-    for i in range(0, len(file_data), 6):
-        payload = file_data[i:i + 6]
+    for frame_num in range(1, total_frames + 1):
+        
+        start_index = (frame_num - 1) * 7
+        # print(start_index)
+        # arr_start.append(start_index)
+        
+        end_index = min(frame_num * 7, len(file_data))
+        # print(end_index)
+        # arr_end.append(end_index)
+        
+        payload = file_data[start_index:end_index]
+        
+        # arr_payload_data.append(payload)
+        
+        
+        
+        
+        
         checksum = sum(payload) & 0xFF  # Calculate checksum
+        # print(checksum)
+        
+        # arr_sum_payload.append(sum(payload))
+        
+        # arr_cal_check.append(checksum)
+        
+        
+        
         payload += bytes([checksum])  # Add checksum to payload
+        
+        # arr_payload_checksum.append(payload)
 
         # Send payload over UART with frame number
         transfer_data_payload(ser, 68, 3, frame_num, *payload)
-        frame_num = (frame_num % 255) + 1  # Rollback frame_num to 1 if reaches 255
+        frame_num = (frame_num % 255) + 1
+        
+        percentage = (frame_num / total_frames) * 100
 
+        # Update tkinter GUI with percentage
+        show_percentage(percentage, percentage_label)
+        # print(frame_num)
+        # print(payload)
+        # print(sum(payload))
+    # print(arr_start[:10])
+    # print(arr_end[total_frames-start_index:total_frames])
+    # print(payload[:7])
+    # print(arr_payload_data)
+    # print(arr_sum_payload)
+    # print("---------------------------------------------------------------------")
+    # print(arr_cal_check)
+    # print("---------------------------------------------------------------------")
+    # print(arr_payload_checksum)
+    # print("---------------------------------------------------------------------")
     print("Firmware flashing completed")
     ser.close()
 
@@ -108,7 +189,8 @@ def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
     ser.write(payload)
     print(f"Transferred Data: {payload}")
     
-
+def show_percentage(percentage, label):
+    label.config(text=f"Progress: {percentage:.2f}%")
 
 # def read_file(file_path):
 #     try:
@@ -282,10 +364,17 @@ def main():
     button_import.pack(pady=10)
     
     
-    flash_button = tk.Button(window, text="Flash Firmware", command=lambda: flash_firmware(file_label.cget("text")[15:], 9600))
+    percentage_label = tk.Label(container_frame, text="Progress: 0.00%", foreground="black", background="white")
+    percentage_label.pack()
 
-    # flash_button = tk.Button(window, text="Flash Firmware", command=lambda: flash_firmware(file_label.cget("text")[14:], 9600))
+    flash_button = tk.Button(window, text="Flash Firmware", command=lambda: flash_firmware(file_label.cget("text")[15:], 9600, percentage_label))
     flash_button.pack()
+    
+    
+    # flash_button = tk.Button(window, text="Flash Firmware", command=lambda: flash_firmware(file_label.cget("text")[15:], 9600))
+
+    # # flash_button = tk.Button(window, text="Flash Firmware", command=lambda: flash_firmware(file_label.cget("text")[14:], 9600))
+    # flash_button.pack()
 
     # flash_button = tk.Button(window, text="Flash Firmware", command=lambda: flash_firmware(serial_port, file_label))
     # button_read = tk.Button(container_frame, text="Read File", width=25, height=5, bg="blue", fg="yellow", command=read_file())
@@ -308,7 +397,7 @@ def main():
     # window.after(5000, update_connection_status)
 
     window.mainloop()
-    close_serial_port(serial_port)
+    # close_serial_port(serial_port)
 
 if __name__ == "__main__":
     main()
