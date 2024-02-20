@@ -8,7 +8,7 @@ import threading
 
 def get_usb_port():
     for port in serial.tools.list_ports.comports():
-        if 'COM15' in port.description: 
+        if 'COM5' in port.description: 
             return port.device
     return None
 
@@ -54,7 +54,8 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
         return
 
     total_frames = math.ceil(len(file_data) / 7)
-    for frame_num in range(1, total_frames + 1):
+    frame_num = 1  # Initialize frame_num
+    for _ in range(total_frames):
         start_index = (frame_num - 1) * 7
         end_index = min(frame_num * 7, len(file_data))
         payload = file_data[start_index:end_index]
@@ -62,8 +63,15 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
         payload += bytes([checksum])
 
         try:
-            ser.write(payload)
-            percentage = (frame_num / total_frames) * 100
+            transfer_data_payload(ser, 68, 3, frame_num, *payload)
+            
+            # Increment frame_num and handle rollback
+            frame_num += 1
+            if frame_num > 255:
+                frame_num = 1
+
+            # Calculate percentage based on total_frames and current frame_num
+            percentage = ((frame_num - 1) / total_frames) * 100
             progress_label.config(text=f"Progress: {percentage:.2f}%")
         except serial.SerialException as e:
             print(f"Error writing to serial port: {e}")
@@ -71,6 +79,63 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
     
     print("Firmware flashing completed.")
     ser.close()
+
+
+# async def flash_firmware(file_label_text, baudrate, progress_label):
+#     file_prefix = "Selected File: "
+#     if not file_label_text.startswith(file_prefix):
+#         print("Invalid file label format.")
+#         return
+    
+#     file_path = file_label_text[len(file_prefix):]  # Extract file path
+#     if not file_path:
+#         print("Please select a file.")
+#         return
+
+#     print("File path:", file_path)  # Debugging print statement
+
+#     try:
+#         with open(file_path, "rb") as f:
+#             file_data = f.read()
+#     except FileNotFoundError:
+#         print(f"File not found: {file_path}")
+#         return
+#     except Exception as e:
+#         print(f"Error opening file: {e}")
+#         return
+
+#     ser = open_serial_port(baudrate)
+#     if not ser:
+#         print("Serial port not available.")
+#         return
+
+#     total_frames = math.ceil(len(file_data) / 7)
+#     for frame_num in range(1, total_frames + 1):
+#         start_index = (frame_num - 1) * 7
+#         end_index = min(frame_num * 7, len(file_data))
+#         payload = file_data[start_index:end_index]
+#         checksum = sum(payload) & 0xFF
+#         payload += bytes([checksum])
+
+#         try:
+#             transfer_data_payload(ser, 68, 3, frame_num, *payload)
+#             frame_num = (frame_num % 255) + 1
+
+#             # ser.write(payload)
+#             percentage = (frame_num / total_frames) * 100
+#             progress_label.config(text=f"Progress: {percentage:.2f}%")
+#         except serial.SerialException as e:
+#             print(f"Error writing to serial port: {e}")
+#             break
+    
+#     print("Firmware flashing completed.")
+#     ser.close()
+    
+def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
+    payload = bytearray([main_id, sequence_id, frame_num]) + bytearray(payload_bytes)
+    print(payload)
+    ser.write(payload)
+    print(f"Transferred Data: {payload}")
 
 def import_file(file_label):
     file_path = filedialog.askopenfilename()
