@@ -15,6 +15,37 @@ def get_usb_port():
 
 baudrate=9600
 
+
+
+def upload_file(file_label_text,baudrate=9600):
+    print(baudrate)
+    file_prefix = "Selected File: "
+    if not file_label_text.startswith(file_prefix):
+        print("Invalid file label format.")
+        return
+    
+    file_path = file_label_text[len(file_prefix):]
+    if not file_path:
+        print("Please select a file.")
+        return
+
+    print("File path:", file_path)
+
+    try:
+        with open(file_path, "rb") as f:
+            file_data = f.read()
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+        return
+    except Exception as e:
+        print(f"Error opening file: {e}")
+        return
+    return file_data 
+
+
+def import_file(file_label):
+    return lambda: upload_file(file_label)
+
 def open_serial_port(baudrate):
     try:
         port = get_usb_port()
@@ -189,9 +220,64 @@ def ecu_reset_payload(ser, main_id, sequence_id, *payload_bytes):
     ser.write(payload)
     print(f"ECU Reset Payload: {payload}")
 
+
+def calculate_program_size(file_label_text):
+
+    file = upload_file(file_label_text)
+    
+    program_size = len(file)
+    return program_size
+
+def total_frame(file_label_text):
+    size = calculate_program_size(file_label_text)
+    total_frames = math.ceil(size / 8)
+    return total_frame
+
+    
+    
+def break_down_program_size(file_label_text):
+    program_size = calculate_program_size(file_label_text)
+    size_byte_1 = program_size & 0xFF
+    size_byte_2 = (program_size >> 8) & 0xFF
+    size_byte_3 = (program_size >> 16) & 0xFF
+    size_byte_4 = (program_size >> 24) & 0xFF
+    return size_byte_1, size_byte_2, size_byte_3, size_byte_4
+    
  
- 
- 
+
+def cal_checksum(*payload_bytes):
+    checksum = 0
+    for _ in payload_bytes:
+        checksum ^= _
+    return checksum
+    
+def send_program_size_payload(ser,main_id,sequence_id,*payload_bytes):
+    payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
+    checksum = cal_checksum(*payload)
+    payload += bytes([checksum])
+    ser.write(payload)
+    print(f"Program Size Payload: {payload}")
+    
+def program_size(file_label):
+    file_data = upload_file(file_label)
+    if file_data:
+        size_byte_1, size_byte_2, size_byte_3, size_byte_4 = break_down_program_size(file_label)
+        ser = open_serial_port(baudrate)
+        
+        if not ser:
+            print("Serial port not available.")
+            return
+        if ser:
+            try:
+                send_program_size_payload(ser, 68, 2, size_byte_1, size_byte_2, size_byte_3, size_byte_4, 0x5A, 0x5A, 0x5A, 0x5A)
+            except serial.SerialException as e:
+                print(f"Error writing to serial port: {e}")
+            finally:
+                ser.close()
+    print("Program Size command sent.")
+        
+    
+
 def erase_memory():
     ser = open_serial_port(baudrate)
     if not ser:
@@ -211,9 +297,70 @@ def erase_memory_payload(ser, main_id, sequence_id, *payload_bytes):
     ser.write(payload)
     print(f"Erase Memory Payload: {payload}")
     
+
+
+def checksum_payload():
+    ser = open_serial_port(baudrate)
+    if not ser:
+        print("Serial port not available.")
+        return
+    try:
+        send_checksum_payload(ser, 68, 4, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A)
+    except serial.SerialException as e:
+        print(f"Error writing to serial port: {e}")
+    print("Checksum payload sent.")
+    ser.close()
+
+def send_payload(ser, main_id, sequence_id, *payload_bytes):
+    payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
+    checksum = cal_checksum(*payload_bytes)
+    payload += bytes([checksum])
+    ser.write(payload)
+    print(f"Payload Sent: {payload}")
     
     
-       
+def send_checksum_payload(ser, main_id, sequence_id, *payload_bytes):
+    payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
+    checksum = cal_checksum(*payload_bytes)
+    payload += bytes([checksum])
+    ser.write(payload)
+    print(f"Checksum Payload: {payload}")
+    
+def application_flashed_properly_payload():
+    ser = open_serial_port(baudrate)
+    
+    if not ser:
+        print("Serial port not available.")
+        return
+    
+    try:
+        send_payload(ser, 68, 7, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A)
+    except serial.SerialException as e:
+        print(f"Error writing to serial port: {e}")
+    finally:
+        ser.close()
+
+    print("Application Flashed Properly Payload sent.")      
+    
+
+# def display():
+#     ser = open_serial_port(baudrate)
+#     if not ser:
+#         print("Serial port not available.")
+#         return
+#     try:
+#         display_payload(ser, 68, 1, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A,  0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 121)
+#     except serial.SerialException as e:
+#         print(f"Error writing to serial port: {e}")
+#     print("Display  payload command sent.")
+#     ser.close()
+
+# def display_payload(ser, main_id, sequence_id, *payload_bytes):
+#     payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
+#     ser.write(payload)
+#     print(f"Display Data: {payload}")
+
+
 def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
     payload = bytearray([main_id, sequence_id, frame_num]) + bytearray(payload_bytes)
     ser.write(payload)
@@ -265,9 +412,21 @@ def main():
     reset_button = tk.Button(window, text="Reset Firmware", command=reset_firmware)
     reset_button.pack()
     
-    
     erase_button = tk.Button(window, text="Erase Memory", command=erase_memory)
     erase_button.pack()
+    
+    program_size_button = tk.Button(window, text="Program Size", command=lambda: threading.Thread(target=program_size, args=(file_label.cget("text"),)).start())
+    program_size_button.pack()
+    
+    checksum_button = tk.Button(window, text="Checksum Payload", command=checksum_payload)
+    checksum_button.pack()
+    
+    app_flashed_button = tk.Button(window, text="Application Flashed Properly", command=application_flashed_properly_payload)
+    app_flashed_button.pack()
+    
+    
+    # display_button = tk.Button(window, text="Display Flashed Properly", command=display_payload)
+    # display_button.pack()
     
     footer_frame = tk.Frame(main_container)
     footer_label = tk.Label(footer_frame, text="EMotorad", foreground="white", background="green", width=100)
