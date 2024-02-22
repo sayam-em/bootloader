@@ -5,6 +5,7 @@ import serial
 import math
 import asyncio
 import threading
+import time
 
 def get_usb_port():
     for port in serial.tools.list_ports.comports():
@@ -12,7 +13,9 @@ def get_usb_port():
             return port.device
     return None
 
-def open_serial_port(baudrate=9600):
+baudrate=9600
+
+def open_serial_port(baudrate):
     try:
         port = get_usb_port()
         if port:
@@ -53,30 +56,65 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
         print("Serial port not available.")
         return
 
-    total_frames = math.ceil(len(file_data) / 7)
-    frame_num = 1  # Initialize frame_num
+    total_frames = math.ceil(len(file_data) / 8)
+    
+
+    arr_start = []
+    arr_end = []
+    arr_payload_data  = []
+    arr_sum_payload = []
+    arr_cal_check = []
+    arr_payload_checksum = []
+    
+    frame_num = 1
     for _ in range(total_frames):
-        start_index = (frame_num - 1) * 7
-        end_index = min(frame_num * 7, len(file_data))
+        start_index = (frame_num - 1) * 8
+        # print(start_index)
+        # arr_start.append(start_index)
+        end_index = min(frame_num * 8, len(file_data))
+        # print(end_index)
+        # arr_end.append(end_index)
         payload = file_data[start_index:end_index]
+        # arr_payload_data.append(payload)
         checksum = sum(payload) & 0xFF
+        # arr_cal_check.append(checksum)
         payload += bytes([checksum])
+        # arr_payload_data.append(payload)
 
         try:
             transfer_data_payload(ser, 68, 3, frame_num, *payload)
+            time.sleep(0.02) 
             
             # Increment frame_num and handle rollback
             frame_num += 1
-            if frame_num > 255:
+            if frame_num >= 255:
                 frame_num = 1
 
             # Calculate percentage based on total_frames and current frame_num
             percentage = ((frame_num - 1) / total_frames) * 100
             progress_label.config(text=f"Progress: {percentage:.2f}%")
+            # print(arr_start[:11])
+            # print("---------------------------------------------------------------------")
+            
+            # print(arr_end[total_frames-start_index:total_frames])
+            # print("---------------------------------------------------------------------")
+            
+            # print(payload[:7])
+            # print("---------------------------------------------------------------------")
+            
+            # print(arr_payload_data)
+            # print("---------------------------------------------------------------------")
+            
+            # print(arr_sum_payload)
+            # print("---------------------------------------------------------------------")
+            # print(arr_cal_check)
+            # print("---------------------------------------------------------------------")
+            # print(arr_payload_checksum)
+            # print("---------------------------------------------------------------------")
         except serial.SerialException as e:
             print(f"Error writing to serial port: {e}")
             break
-    
+
     print("Firmware flashing completed.")
     ser.close()
 
@@ -130,12 +168,64 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
     
 #     print("Firmware flashing completed.")
 #     ser.close()
+
+
+def reset_firmware():
+    ser = open_serial_port(baudrate)
+    if not ser:
+        print("Serial port not available.")
+        return
+    try:
+        ecu_reset_payload(ser, 68, 6, 90, 90, 90, 90, 90, 90, 90, 90, 90, 20)
+    except serial.SerialException as e:
+        print(f"Error writing to serial port: {e}")
+    print("Firmware reset completed.")
+    ser.close()
+
+def ecu_reset_payload(ser, main_id, sequence_id, *payload_bytes):
+    payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
+    checksum = sum(payload) & 0xFF
+    payload += bytes([checksum])
+    ser.write(payload)
+    print(f"ECU Reset Payload: {payload}")
+
+ 
+ 
+ 
+def erase_memory():
+    ser = open_serial_port(baudrate)
+    if not ser:
+        print("Serial port not available.")
+        return
+    try:
+        erase_memory_payload(ser, 68, 1, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 121)
+    except serial.SerialException as e:
+        print(f"Error writing to serial port: {e}")
+    print("Memory erase command sent.")
+    ser.close()
+
+def erase_memory_payload(ser, main_id, sequence_id, *payload_bytes):
+    payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
+    checksum = sum(payload) & 0xFF
+    payload += bytes([checksum])
+    ser.write(payload)
+    print(f"Erase Memory Payload: {payload}")
     
+    
+    
+       
 def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
     payload = bytearray([main_id, sequence_id, frame_num]) + bytearray(payload_bytes)
-    print(payload)
     ser.write(payload)
     print(f"Transferred Data: {payload}")
+    
+# def erase_memory_payload(ser, main_id, sequence_id, *payload_bytes, checksum):
+    
+#     print("Erase Memory Payload(10 bytes):")
+#     print(f"Main ID: {main_id}")
+#     print(f"Sequence ID: {sequence_id}")
+#     print("Payload Bytes:")
+#     print(f"Checksum: {checksum}")
 
 def import_file(file_label):
     file_path = filedialog.askopenfilename()
@@ -171,6 +261,13 @@ def main():
     progress_label.pack()
     flash_button = tk.Button(window, text="Flash Firmware", command=lambda: threading.Thread(target=flash_firmware_thread, args=(file_label.cget("text"), 9600, progress_label)).start())
     flash_button.pack()
+    
+    reset_button = tk.Button(window, text="Reset Firmware", command=reset_firmware)
+    reset_button.pack()
+    
+    
+    erase_button = tk.Button(window, text="Erase Memory", command=erase_memory)
+    erase_button.pack()
     
     footer_frame = tk.Frame(main_container)
     footer_label = tk.Label(footer_frame, text="EMotorad", foreground="white", background="green", width=100)
