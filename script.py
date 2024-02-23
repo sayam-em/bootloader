@@ -114,7 +114,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 
         try:
             send_payload(ser, 68, 3, frame_num, *payload)
-            time.sleep(0.02) 
+            time.sleep(0.05) 
             
             # Increment frame_num and handle rollback
             frame_num += 1
@@ -200,8 +200,8 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 #     print("Firmware flashing completed.")
 #     ser.close()
 def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
+    start_time = time.time()
     before_check_sum = [main_id, sequence_id, *payload_bytes]
-    print(before_check_sum)
     
     checksum = cal_checksum(*before_check_sum)
     print(checksum)
@@ -210,6 +210,11 @@ def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
     ser.write(payload)
     print(ser, main_id, sequence_id, *payload_bytes)
     print(f"ECU Reset Payload: {payload}")
+    end_time = time.time()  
+    elapsed_time = end_time - start_time
+    print(f"Time taken: {elapsed_time} seconds")
+
+    time.sleep(0.05)
 
 def reset_firmware():
     ser = open_serial_port(baudrate)
@@ -389,6 +394,24 @@ def display():
         print(f"Error writing to serial port: {e}")
     print("Display  payload command sent.")
     ser.close()
+    
+    
+    
+def feedback(feedback_id):
+    feedback_messages = {
+        1: "Erased Successful",
+        2: "Erase Failure",
+        3: "Frame Received",
+        4: "Frame Receive Failure",
+        5: "Checksum Data",
+        6: "Program Size Received"
+    }
+
+    if feedback_id in feedback_messages:
+        feedback_message = feedback_messages[feedback_id]
+        print(f"Feedback ID: {feedback_id} - {feedback_message}")
+    else:
+        print(f"Invalid Feedback ID: {feedback_id}")
 
 # def display_payload(ser, main_id, sequence_id, *payload_bytes):
 #     payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
