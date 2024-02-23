@@ -107,9 +107,9 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
         # arr_end.append(end_index)
         payload = file_data[start_index:end_index]
         # arr_payload_data.append(payload)
-        checksum = sum(payload) & 0xFF
         # arr_cal_check.append(checksum)
-        payload += bytes([checksum])
+        payload = bytes(payload)
+        print(payload)
         # arr_payload_data.append(payload)
 
         try:
@@ -199,7 +199,12 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
     
 #     print("Firmware flashing completed.")
 #     ser.close()
-
+def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
+    payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
+    checksum = cal_checksum(*payload)
+    payload += bytes([checksum])
+    ser.write(payload)
+    print(f"Transfer Data Payload: {payload}")
 
 def reset_firmware():
     ser = open_serial_port(baudrate)
@@ -215,9 +220,12 @@ def reset_firmware():
 
 def ecu_reset_payload(ser, main_id, sequence_id, *payload_bytes):
     payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
-    checksum = sum(payload) & 0xFF
+    checksum = cal_checksum(payload)
+    print(checksum)
     payload += bytes([checksum])
     ser.write(payload)
+    print(f"Checksum Payload: {payload}")
+    print(ser, main_id, sequence_id, *payload_bytes)
     print(f"ECU Reset Payload: {payload}")
 
 
@@ -250,6 +258,7 @@ def cal_checksum(*payload_bytes):
     for _ in payload_bytes:
         checksum ^= _
     return checksum
+print(cal_checksum)
     
 def send_program_size_payload(ser,main_id,sequence_id,*payload_bytes):
     payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
@@ -292,13 +301,28 @@ def erase_memory():
 
 def erase_memory_payload(ser, main_id, sequence_id, *payload_bytes):
     payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
-    checksum = sum(payload) & 0xFF
+    checksum = cal_checksum(payload)
+    print(checksum)
     payload += bytes([checksum])
     ser.write(payload)
+    print(f"Checksum Payload: {payload}")
+    print(ser, main_id, sequence_id, *payload_bytes)
     print(f"Erase Memory Payload: {payload}")
     
 
 
+    
+    
+def send_checksum_payload(ser, main_id, sequence_id, *payload_bytes):
+    payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
+    checksum = cal_checksum(payload)
+    print(checksum)
+    payload += bytes([checksum])
+    ser.write(payload)
+    print(f"Checksum Payload: {payload}")
+    print(ser, main_id, sequence_id, *payload_bytes)
+    
+    
 def checksum_payload():
     ser = open_serial_port(baudrate)
     if not ser:
@@ -313,18 +337,11 @@ def checksum_payload():
 
 def send_payload(ser, main_id, sequence_id, *payload_bytes):
     payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
-    checksum = cal_checksum(*payload_bytes)
+    checksum = cal_checksum([main_id, sequence_id] + bytearray(payload_bytes))
     payload += bytes([checksum])
     ser.write(payload)
     print(f"Payload Sent: {payload}")
     
-    
-def send_checksum_payload(ser, main_id, sequence_id, *payload_bytes):
-    payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
-    checksum = cal_checksum(*payload_bytes)
-    payload += bytes([checksum])
-    ser.write(payload)
-    print(f"Checksum Payload: {payload}")
     
 def application_flashed_properly_payload():
     ser = open_serial_port(baudrate)
@@ -361,11 +378,7 @@ def application_flashed_properly_payload():
 #     print(f"Display Data: {payload}")
 
 
-def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
-    payload = bytearray([main_id, sequence_id, frame_num]) + bytearray(payload_bytes)
-    ser.write(payload)
-    print(f"Transferred Data: {payload}")
-    
+
 # def erase_memory_payload(ser, main_id, sequence_id, *payload_bytes, checksum):
     
 #     print("Erase Memory Payload(10 bytes):")

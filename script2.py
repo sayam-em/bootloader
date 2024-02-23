@@ -56,3 +56,31 @@ async def earse_payload():
 
     print("Firmware flashing completed.")
     ser.close()
+
+
+
+
+def send_program_size_payload(ser,main_id,sequence_id,*payload_bytes):
+    payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
+    checksum = cal_checksum(*payload)
+    payload += bytes([checksum])
+    ser.write(payload)
+    print(f"Program Size Payload: {payload}")
+    
+def program_size(file_label):
+    file_data = upload_file(file_label)
+    if file_data:
+        size_byte_1, size_byte_2, size_byte_3, size_byte_4 = break_down_program_size(file_label)
+        ser = open_serial_port(baudrate)
+        
+        if not ser:
+            print("Serial port not available.")
+            return
+        if ser:
+            try:
+                send_program_size_payload(ser, 68, 2, size_byte_1, size_byte_2, size_byte_3, size_byte_4, 0x5A, 0x5A, 0x5A, 0x5A)
+            except serial.SerialException as e:
+                print(f"Error writing to serial port: {e}")
+            finally:
+                ser.close()
+    print("Program Size command sent.")
