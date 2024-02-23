@@ -394,24 +394,71 @@ def display():
         print(f"Error writing to serial port: {e}")
     print("Display  payload command sent.")
     ser.close()
+   
+def listen_inputs():
+    ser = open_serial_port(baudrate)
+    if not ser:
+        print("Serial port not available.")
+        return None
+
+    while True:
+        if ser.in_waiting > 0:
+            incoming_data = ser.read(ser.in_waiting)
+            return incoming_data
+
     
+def feedback(feedback_id, *data):
     
-    
-def feedback(feedback_id):
     feedback_messages = {
         1: "Erased Successful",
         2: "Erase Failure",
         3: "Frame Received",
         4: "Frame Receive Failure",
         5: "Checksum Data",
-        6: "Program Size Received"
+        6: "Program Size Received",
+        7: "Flashed Status Received",
+        8: "App Sign failure"
     }
+    
 
+    mil_gaya = listen_inputs()
     if feedback_id in feedback_messages:
         feedback_message = feedback_messages[feedback_id]
         print(f"Feedback ID: {feedback_id} - {feedback_message}")
+
+        if feedback_id == 1:
+            print("Erased successful. Ready for flashing.")
+
+        elif feedback_id == 2:
+            print("Erase operation failed. Retrying...")
+
+        elif feedback_id == 3:
+            requested_frame_number = data[0] if data else None
+            print(f"Frame {requested_frame_number} received successfully.")
+
+        elif feedback_id == 4:
+            print("Frame receive failure. Resending frame...")
+
+        elif feedback_id == 5:
+            checksum_value = data
+            print(f"Received checksum: {checksum_value}")
+
+        elif feedback_id == 6:
+            program_size = data[0] if data else None
+            print(f"Program size received: {program_size} bytes.")
+
+        elif feedback_id == 7:
+            print("Firmware flashed successfully.")
+
+        elif feedback_id == 8:
+            print("Application signature failure.")
+
+        else:
+            print(f"Unknown feedback ID: {feedback_id}")
+
     else:
         print(f"Invalid Feedback ID: {feedback_id}")
+
 
 # def display_payload(ser, main_id, sequence_id, *payload_bytes):
 #     payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
@@ -492,6 +539,8 @@ def main():
 
     main_container.pack(fill=tk.BOTH, expand=True)
 
+
+    # threading.Thread(target=listen_inputs).start()
     window.mainloop()
 
 if __name__ == "__main__":
