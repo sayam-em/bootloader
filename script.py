@@ -110,6 +110,8 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
         # arr_cal_check.append(checksum)
         payload = bytes(payload)
         print(payload)
+        payload = bytes(payload)
+        print(payload)
         # arr_payload_data.append(payload)
 
         try:
@@ -372,15 +374,17 @@ def display():
     print("Display  payload command sent.")
     ser.close()
 
-def display_payload(ser, main_id, sequence_id, *payload_bytes):
-    payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
-    checksum = cal_checksum([main_id, sequence_id] + bytearray(payload_bytes))
-    payload += bytes([checksum])
+# def display_payload(ser, main_id, sequence_id, *payload_bytes):
+#     payload = bytearray([main_id, sequence_id]) + bytearray(payload_bytes)
+#     ser.write(payload)
+#     print(f"Display Data: {payload}")
+
+
+def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
+    payload = bytearray([main_id, sequence_id, frame_num]) + bytearray(payload_bytes)
     ser.write(payload)
-    print(f"Payload Sent: {payload}")
-
-
-
+    print(f"Transferred Data: {payload}")
+    
 # def erase_memory_payload(ser, main_id, sequence_id, *payload_bytes, checksum):
     
 #     print("Erase Memory Payload(10 bytes):")
