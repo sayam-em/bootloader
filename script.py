@@ -59,20 +59,26 @@ def open_serial_port(baudrate):
         print(f"Error opening the serial port: {e}")
         return None
     
+    
+import asyncio
+
 async def flash_firmware(file_label_text, baudrate, progress_label):
+    # Check file label format
     file_prefix = "Selected File: "
     if not file_label_text.startswith(file_prefix):
         print("Invalid file label format.")
         return
     
-    file_path = file_label_text[len(file_prefix):]  # Extract file path
+    # Extract file path
+    file_path = file_label_text[len(file_prefix):]
     if not file_path:
         print("Please select a file.")
         return
 
-    print("File path:", file_path)  # Debugging print statement
+    print(f"File path: {file_path}")  # Debugging print statement
 
     try:
+        # Read file data
         with open(file_path, "rb") as f:
             file_data = f.read()
     except FileNotFoundError:
@@ -82,6 +88,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
         print(f"Error opening file: {e}")
         return
 
+    # Open serial port
     ser = open_serial_port(baudrate)
     if not ser:
         print("Serial port not available.")
@@ -89,65 +96,290 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 
     total_frames = math.ceil(len(file_data) / 8)
     
-
-    arr_start = []
-    arr_end = []
-    arr_payload_data  = []
-    arr_sum_payload = []
-    arr_cal_check = []
-    arr_payload_checksum = []
-    
     frame_num = 1
     for _ in range(total_frames):
         start_index = (frame_num - 1) * 8
-        # print(start_index)
-        # arr_start.append(start_index)
         end_index = min(frame_num * 8, len(file_data))
-        # print(end_index)
-        # arr_end.append(end_index)
         payload = file_data[start_index:end_index]
-        # arr_payload_data.append(payload)
-        # arr_cal_check.append(checksum)
         payload = bytes(payload)
-        print(payload)
-        # arr_payload_data.append(payload)
 
         try:
+            # Send payload
+            print(f"Sending payload for frame {frame_num}: {payload}")
             send_payload(ser, 68, 3, frame_num, *payload)
-            time.sleep(0.05) 
             
-            # Increment frame_num and handle rollback
+            # Increment frame_num
             frame_num += 1
-            if frame_num >= 255:
-                frame_num = 1
-
+            
+            # Delay for 50 ms after the first payload is sent
+            await asyncio.sleep(0.05)
+            
             # Calculate percentage based on total_frames and current frame_num
             percentage = ((frame_num - 1) / total_frames) * 100
             progress_label.config(text=f"Progress: {percentage:.2f}%")
-            # print(arr_start[:11])
-            # print("---------------------------------------------------------------------")
             
-            # print(arr_end[total_frames-start_index:total_frames])
-            # print("---------------------------------------------------------------------")
-            
-            # print(payload[:7])
-            # print("---------------------------------------------------------------------")
-            
-            # print(arr_payload_data)
-            # print("---------------------------------------------------------------------")
-            
-            # print(arr_sum_payload)
-            # print("---------------------------------------------------------------------")
-            # print(arr_cal_check)
-            # print("---------------------------------------------------------------------")
-            # print(arr_payload_checksum)
-            # print("---------------------------------------------------------------------")
         except serial.SerialException as e:
             print(f"Error writing to serial port: {e}")
             break
 
     print("Firmware flashing completed.")
     ser.close()
+
+    
+    
+# async def flash_firmware(file_label_text, baudrate, progress_label):
+#     # Check file label format
+#     file_prefix = "Selected File: "
+#     if not file_label_text.startswith(file_prefix):
+#         print("Invalid file label format.")
+#         return
+    
+#     # Extract file path
+#     file_path = file_label_text[len(file_prefix):]
+#     if not file_path:
+#         print("Please select a file.")
+#         return
+
+#     print(f"File path: {file_path}")  # Debugging print statement
+
+#     try:
+#         # Read file data
+#         with open(file_path, "rb") as f:
+#             file_data = f.read()
+#     except FileNotFoundError:
+#         print(f"File not found: {file_path}")
+#         return
+#     except Exception as e:
+#         print(f"Error opening file: {e}")
+#         return
+
+#     # Open serial port
+#     ser = open_serial_port(baudrate)
+#     if not ser:
+#         print("Serial port not available.")
+#         return
+
+#     print(f"vanilla length of file: {len(file_data) / 8}")
+#     total_frames = math.ceil(len(file_data) / 8)
+#     print(f"After ceiling to the next number {total_frame}")
+    
+#     # Loop through frames and send data
+#     frame_num = 1
+#     for _ in range(total_frames):
+#         start_index = (frame_num - 1) * 8
+#         print(f"Start index {start_index}")
+
+#         end_index = min(frame_num * 8, len(file_data))
+#         print(f"end Index {end_index}")
+#         payload = file_data[start_index:end_index]
+#         print(f"before bytes payload meaning vanilla payload {payload}")
+#         payload = bytes(payload)
+#         print(f"Length of the payload {len(payload)}")
+#         print(f"after bytes payload {payload}")
+#         print(f"initial frame number {frame_num}")
+
+#         try:
+#             print(*payload)
+#             payload_values = ' '.join(str(byte) for byte in payload)
+#             print(f"{ser} 68 3 {frame_num} {payload_values}")
+#             send_payload(ser, 68, 3, frame_num, *payload)
+#             frame_num += 1
+#             print(f"after first frame {frame_num}")
+#             # Delay for 50 ms after the first payload is sent, and send the second payload after waiting for ther time interval that is 50 ms will be sent, repeat.
+
+#             # Calculate percentage based on total_frames and current frame_num
+#             percentage = ((frame_num - 1) / total_frames) * 100
+#             progress_label.config(text=f"Progress: {percentage:.2f}%")
+            
+#         except serial.SerialException as e:
+#             print(f"Error writing to serial port: {e}")
+#             break
+
+#     print("Firmware flashing completed.")
+#     ser.close()
+
+    
+# async def flash_firmware(file_label_text, baudrate, progress_label):
+#     # Check file label format
+#     file_prefix = "Selected File: "
+#     if not file_label_text.startswith(file_prefix):
+#         print("Invalid file label format.")
+#         return
+    
+#     # Extract file path
+#     file_path = file_label_text[len(file_prefix):]
+#     if not file_path:
+#         print("Please select a file.")
+#         return
+
+#     print("File path:", file_path)  # Debugging print statement
+
+#     try:
+#         # Read file data
+#         with open(file_path, "rb") as f:
+#             file_data = f.read()
+#     except FileNotFoundError:
+#         print(f"File not found: {file_path}")
+#         return
+#     except Exception as e:
+#         print(f"Error opening file: {e}")
+#         return
+
+#     # Open serial port
+#     ser = open_serial_port(baudrate)
+#     if not ser:
+#         print("Serial port not available.")
+#         return
+
+#     print(f"vanilla length of file:" + (len(file_data) / 8))
+#     total_frames = math.ceil(len(file_data) / 8)
+#     print("After ceiling to the next number " + total_frame)
+    
+#     # Loop through frames and send data
+#     frame_num = 1
+#     for _ in range(total_frames):
+#         start_index = (frame_num - 1) * 7
+#         print("Start index " + end_index)
+
+#         end_index = min(frame_num * 7, len(file_data))
+#         print("end Index " + end_index)
+#         payload = file_data[start_index:end_index]
+#         print("before bytes payload meaning vanilla payload " + payload)
+#         payload = bytes(payload)
+#         print("Length of the payload " + len(payload))
+#         print("after bytes payload " + payload)
+#         print("initial fram number " + frame_num)
+
+#         try:
+#             print(ser, 68, 3, frame_num, *payload)
+#             send_payload(ser, 68, 3, frame_num, *payload)
+#             frame_num += 1
+#             print("after first frame " + frame_num)
+#             # Delay for 50 ms
+#             time.sleep(5000)
+
+#             # Calculate percentage based on total_frames and current frame_num
+#             percentage = ((frame_num - 1) / total_frames) * 100
+#             progress_label.config(text=f"Progress: {percentage:.2f}%")
+            
+#         except serial.SerialException as e:
+#             print(f"Error writing to serial port: {e}")
+#             break
+
+#     print("Firmware flashing completed.")
+#     ser.close()
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+# async def flash_firmware(file_label_text, baudrate, progress_label):
+#     file_prefix = "Selected File: "
+#     if not file_label_text.startswith(file_prefix):
+#         print("Invalid file label format.")
+#         return
+    
+#     file_path = file_label_text[len(file_prefix):]  # Extract file path
+#     if not file_path:
+#         print("Please select a file.")
+#         return
+
+#     print("File path:", file_path)  # Debugging print statement
+
+#     try:
+#         with open(file_path, "rb") as f:
+#             file_data = f.read()
+#     except FileNotFoundError:
+#         print(f"File not found: {file_path}")
+#         return
+#     except Exception as e:
+#         print(f"Error opening file: {e}")
+#         return
+
+#     ser = open_serial_port(baudrate)
+#     if not ser:
+#         print("Serial port not available.")
+#         return
+
+#     total_frames = math.ceil(len(file_data) / 8)
+    
+
+#     arr_start = []
+#     arr_end = []
+#     arr_payload_data  = []
+#     arr_sum_payload = []
+#     arr_cal_check = []
+#     arr_payload_checksum = []
+    
+#     frame_num = 1
+#     for _ in range(total_frames):
+#         start_index = (frame_num - 1) * 8
+#         # print(start_index)
+#         # arr_start.append(start_index)
+#         end_index = min(frame_num * 8, len(file_data))
+#         # print(end_index)
+#         # arr_end.append(end_index)
+#         payload = file_data[start_index:end_index]
+#         # arr_payload_data.append(payload)
+#         # arr_cal_check.append(checksum)
+#         payload = bytes(payload)
+#         print(payload)
+#         # arr_payload_data.append(payload)
+
+#         try:
+#             send_payload(ser, 68, 3, frame_num, *payload)
+            
+#             # Increment frame_num and handle rollback
+#             frame_num += 1
+#             if frame_num >= 255:
+#                 frame_num = 1
+
+#             # Calculate percentage based on total_frames and current frame_num
+#             percentage = ((frame_num - 1) / total_frames) * 100
+#             progress_label.config(text=f"Progress: {percentage:.2f}%")
+#             # print(arr_start[:11])
+#             # print("---------------------------------------------------------------------")
+            
+#             # print(arr_end[total_frames-start_index:total_frames])
+#             # print("---------------------------------------------------------------------")
+            
+#             # print(payload[:7])
+#             # print("---------------------------------------------------------------------")
+            
+#             # print(arr_payload_data)
+#             # print("---------------------------------------------------------------------")
+            
+#             # print(arr_sum_payload)
+#             # print("---------------------------------------------------------------------")
+#             # print(arr_cal_check)
+#             # print("---------------------------------------------------------------------")
+#             # print(arr_payload_checksum)
+#             # print("---------------------------------------------------------------------")
+#         except serial.SerialException as e:
+#             print(f"Error writing to serial port: {e}")
+#             break
+
+#     print("Firmware flashing completed.")
+#     ser.close()
 
 
 # async def flash_firmware(file_label_text, baudrate, progress_label):
@@ -209,7 +441,7 @@ def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
     print(payload)
     ser.write(payload)
     print(ser, main_id, sequence_id, *payload_bytes)
-    print(f"ECU Reset Payload: {payload}")
+    print(f"Transfer Data payload Payload: {payload}")
     end_time = time.time()  
     elapsed_time = end_time - start_time
     print(f"Time taken: {elapsed_time} seconds")
@@ -217,6 +449,7 @@ def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
     time.sleep(0.05)
 
 def reset_firmware():
+    
     ser = open_serial_port(baudrate)
     if not ser:
         print("Serial port not available.")
@@ -293,7 +526,7 @@ def program_size(file_label):
             return
         if ser:
             try:
-                send_payload(ser, 68, 2, size_byte_1, size_byte_2, size_byte_3, size_byte_4, 0x5A, 0x5A, 0x5A, 0x5A)
+                send_payload(ser, 68, 2, size_byte_1, size_byte_2, size_byte_3, size_byte_4,90,90,90,90)
             except serial.SerialException as e:
                 print(f"Error writing to serial port: {e}")
             finally:
@@ -304,11 +537,12 @@ def program_size(file_label):
 
 def erase_memory():
     ser = open_serial_port(baudrate)
+    print(ser)
     if not ser:
         print("Serial port not available.")
         return
     try:
-        send_payload(ser, 68, 1, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A)
+        send_payload(ser, 68, 1,90,90,90,90,90,90,90,90,90)
     except serial.SerialException as e:
         print(f"Error writing to serial port: {e}")
     print("Memory erase command sent.")
@@ -338,7 +572,7 @@ def send_checksum_payload(ser, main_id, sequence_id, *payload_bytes):
     print(payload)
     ser.write(payload)
     print(ser, main_id, sequence_id, *payload_bytes)
-    print(f"ECU Reset Payload: {payload}")
+    print(f"Checksum Payload: {payload}")
     
     
 def checksum_payload():
@@ -347,7 +581,7 @@ def checksum_payload():
         print("Serial port not available.")
         return
     try:
-        send_checksum_payload(ser, 68, 4, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A)
+        send_checksum_payload(ser, 68, 4,90,90,90,90,90,90,90,90,90)
     except serial.SerialException as e:
         print(f"Error writing to serial port: {e}")
     print("Checksum payload sent.")
@@ -363,7 +597,7 @@ def send_payload(ser, main_id, sequence_id, *payload_bytes):
     print(payload)
     ser.write(payload)
     print(ser, main_id, sequence_id, *payload_bytes)
-    print(f"ECU Reset Payload: {payload}")
+    print(f"Payload sent: {payload}")
     
     
 def application_flashed_properly_payload():
@@ -374,7 +608,7 @@ def application_flashed_properly_payload():
         return
     
     try:
-        send_payload(ser, 68, 7, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A)
+        send_payload(ser, 68, 7,90,90,90,90,90,90,90,90,90)
     except serial.SerialException as e:
         print(f"Error writing to serial port: {e}")
     finally:
@@ -389,7 +623,7 @@ def display():
         print("Serial port not available.")
         return
     try:
-        send_payload(ser, 1, 20, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A,  0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A)
+        send_payload(ser, 1, 20, 154, 154, 154, 154, 154, 154, 154, 154,  154, 154, 154, 154, 154, 154, 154, 154, 154)
     except serial.SerialException as e:
         print(f"Error writing to serial port: {e}")
     print("Display  payload command sent.")
@@ -422,6 +656,7 @@ def feedback(feedback_id, *data):
     
 
     mil_gaya = listen_inputs()
+    print(mil_gaya)
     if feedback_id in feedback_messages:
         feedback_message = feedback_messages[feedback_id]
         print(f"Feedback ID: {feedback_id} - {feedback_message}")
