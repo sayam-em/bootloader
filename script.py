@@ -60,73 +60,7 @@ def open_serial_port(baudrate):
         return None
     
     
-import asyncio
 
-async def flash_firmware(file_label_text, baudrate, progress_label):
-    # Check file label format
-    file_prefix = "Selected File: "
-    if not file_label_text.startswith(file_prefix):
-        print("Invalid file label format.")
-        return
-    
-    # Extract file path
-    file_path = file_label_text[len(file_prefix):]
-    if not file_path:
-        print("Please select a file.")
-        return
-
-    print(f"File path: {file_path}")  # Debugging print statement
-
-    try:
-        # Read file data
-        with open(file_path, "rb") as f:
-            file_data = f.read()
-    except FileNotFoundError:
-        print(f"File not found: {file_path}")
-        return
-    except Exception as e:
-        print(f"Error opening file: {e}")
-        return
-
-    # Open serial port
-    ser = open_serial_port(baudrate)
-    if not ser:
-        print("Serial port not available.")
-        return
-
-    total_frames = math.ceil(len(file_data) / 8)
-    
-    frame_num = 1
-    for _ in range(total_frames):
-        start_index = (frame_num - 1) * 8
-        end_index = min(frame_num * 8, len(file_data))
-        payload = file_data[start_index:end_index]
-        payload = bytes(payload)
-
-        try:
-            # Send payload
-            print(f"Sending payload for frame {frame_num}: {payload}")
-            send_payload(ser, 68, 3, frame_num, *payload)
-            
-            # Increment frame_num
-            frame_num += 1
-            
-            # Delay for 50 ms after the first payload is sent
-            await asyncio.sleep(0.05)
-            
-            # Calculate percentage based on total_frames and current frame_num
-            percentage = ((frame_num - 1) / total_frames) * 100
-            progress_label.config(text=f"Progress: {percentage:.2f}%")
-            
-        except serial.SerialException as e:
-            print(f"Error writing to serial port: {e}")
-            break
-
-    print("Firmware flashing completed.")
-    ser.close()
-
-    
-    
 # async def flash_firmware(file_label_text, baudrate, progress_label):
 #     # Check file label format
 #     file_prefix = "Selected File: "
@@ -159,11 +93,8 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 #         print("Serial port not available.")
 #         return
 
-#     print(f"vanilla length of file: {len(file_data) / 8}")
 #     total_frames = math.ceil(len(file_data) / 8)
-#     print(f"After ceiling to the next number {total_frame}")
     
-#     # Loop through frames and send data
 #     frame_num = 1
 #     for _ in range(total_frames):
 #         start_index = (frame_num - 1) * 8
@@ -184,9 +115,16 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 #             print(f"{ser} 68 3 {frame_num} {payload_values}")
 #             send_payload(ser, 68, 3, frame_num, *payload)
 #             frame_num += 1
-#             print(f"after first frame {frame_num}")
-#             # Delay for 50 ms after the first payload is sent, and send the second payload after waiting for ther time interval that is 50 ms will be sent, repeat.
-
+#             t = time.localtime()
+#             current_time = time.strftime("%H:%M:%S", t)
+#             print(current_time)
+#             # Delay for 50 ms after the first payload is sent
+#             await asyncio.sleep(0.05)
+#             t = time.localtime()
+#             current_time = time.strftime("%H:%M:%S", t)
+#             print(current_time)
+#             print("after")
+            
 #             # Calculate percentage based on total_frames and current frame_num
 #             percentage = ((frame_num - 1) / total_frames) * 100
 #             progress_label.config(text=f"Progress: {percentage:.2f}%")
@@ -197,6 +135,88 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 
 #     print("Firmware flashing completed.")
 #     ser.close()
+
+    
+    
+async def flash_firmware(file_label_text, baudrate, progress_label):
+    # Check file label format
+    file_prefix = "Selected File: "
+    if not file_label_text.startswith(file_prefix):
+        print("Invalid file label format.")
+        return
+    
+    # Extract file path
+    file_path = file_label_text[len(file_prefix):]
+    if not file_path:
+        print("Please select a file.")
+        return
+
+    print(f"File path: {file_path}")  # Debugging print statement
+
+    try:
+        # Read file data
+        with open(file_path, "rb") as f:
+            file_data = f.read()
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+        return
+    except Exception as e:
+        print(f"Error opening file: {e}")
+        return
+
+    # Open serial port
+    ser = open_serial_port(baudrate)
+    if not ser:
+        print("Serial port not available.")
+        return
+
+    print(f"vanilla length of file: {len(file_data) / 8}")
+    total_frames = math.ceil(len(file_data) / 8)
+    print(f"After ceiling to the next number {total_frame}")
+    
+    # Loop through frames and send data
+    frame_num = 1
+    for _ in range(total_frames):
+        start_index = (frame_num - 1) * 8
+        print(f"Start index {start_index}")
+
+        end_index = min(frame_num * 8, len(file_data))
+        print(f"end Index {end_index}")
+        payload = file_data[start_index:end_index]
+        print(f"before bytes payload meaning vanilla payload {payload}")
+        payload = bytes(payload)
+        print(f"Length of the payload {len(payload)}")
+        print(f"after bytes payload {payload}")
+        print(f"initial frame number {frame_num}")
+
+        try:
+            print(*payload)
+            payload_values = ' '.join(str(byte) for byte in payload)
+            print(f"{ser} 68 3 {frame_num} {payload_values}")
+            send_payload(ser, 68, 3, frame_num, *payload)
+            frame_num += 1
+            if frame_num >= 255:
+                frame_num = 1
+            t = time.localtime()
+            current_time = time.strftime("%H:%M:%S", t)
+            print(current_time)
+            # Delay for 50 ms after the first payload is sent
+            await asyncio.sleep(0.05)
+            t = time.localtime()
+            current_time = time.strftime("%H:%M:%S", t)
+            print(current_time)
+            print("after")
+            
+            # Calculate percentage based on total_frames and current frame_num
+            percentage = ((frame_num - 1) / total_frames) * 100
+            progress_label.config(text=f"Progress: {percentage:.2f}%")
+            
+        except serial.SerialException as e:
+            print(f"Error writing to serial port: {e}")
+            break
+
+    print("Firmware flashing completed.")
+    ser.close()
 
     
 # async def flash_firmware(file_label_text, baudrate, progress_label):
