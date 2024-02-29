@@ -322,7 +322,7 @@ def display():
     print("Display  payload command sent.")
     ser.close()
    
-def listen_inputs(callback):
+async def listen_inputs(callback):
     ser = open_serial_port(baudrate)
     if not ser:
         print("Serial port not available.")
@@ -333,7 +333,8 @@ def listen_inputs(callback):
             if ser.in_waiting > 0:
                 incoming_data = ser.read(ser.in_waiting)
                 callback(incoming_data)
-            time.sleep(0.1)  # Add a small delay to avoid high CPU usage in the loop
+            await asyncio.sleep(0.05)
+
     finally:
         ser.close()  # Close the serial port when done
 
