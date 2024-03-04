@@ -868,21 +868,6 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-import tkinter as tk
-from tkinter import filedialog
-import serial.tools.list_ports
-import serial
-import math
-import threading
-import time
-
-# Global variables
-baudrate = 9600
-
 def open_serial_port(baudrate):
     try:
         port = get_usb_port()
@@ -949,6 +934,63 @@ def process_feedback(data):
 def listenUltraProxMax():
     threading.Thread(target=listen_inputs, args=(process_feedback,)).start()
 
+
+
+def feedback(feedback_id, *data):
+    
+    feedback_messages = {
+        1: "Erased Successful",
+        2: "Erase Failure",
+        3: "Frame Received",
+        4: "Frame Receive Failure",
+        5: "Checksum Data",
+        6: "Program Size Received",
+        7: "Flashed Status Received",
+        8: "App Sign failure"
+    }
+    
+
+    mil_gaya = listen_inputs()
+    print(mil_gaya)
+    if feedback_id in feedback_messages:
+        feedback_message = feedback_messages[feedback_id]
+        print(f"Feedback ID: {feedback_id} - {feedback_message}")
+
+        if feedback_id == 1:
+            print("Erased successful. Ready for flashing.")
+
+        elif feedback_id == 2:
+            print("Erase operation failed. Retrying...")
+
+        elif feedback_id == 3:
+            requested_frame_number = data[0] if data else None
+            print(f"Frame {requested_frame_number} received successfully.")
+
+        elif feedback_id == 4:
+            print("Frame receive failure. Resending frame...")
+
+        elif feedback_id == 5:
+            checksum_value = data
+            print(f"Received checksum: {checksum_value}")
+
+        elif feedback_id == 6:
+            program_size = data[0] if data else None
+            print(f"Program size received: {program_size} bytes.")
+
+        elif feedback_id == 7:
+            print("Firmware flashed successfully.")
+
+        elif feedback_id == 8:
+            print("Application signature failure.")
+
+        else:
+            print(f"Unknown feedback ID: {feedback_id}")
+
+    else:
+        print(f"Invalid Feedback ID: {feedback_id}")
+
+
+
 def main():
     window = tk.Tk()
     window.title("Bootloader")
@@ -1011,3 +1053,584 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def open_serial_port(baudrate):
+    try:
+        port = "COM5"  # Replace with your specific COM port
+        ser = serial.Serial(port, baudrate)
+        return ser
+    except Exception as e:
+        print(f"Error opening the serial port: {e}")
+        return None
+
+def listen_feedback(ser):
+    while True:
+        if ser.in_waiting > 0:
+            feedback = ser.readline().decode().strip()  # Assuming feedback is sent as ASCII string
+            print("Received feedback:", feedback)
+            interpret_feedback(feedback)  # Interpret and execute actions based on feedback
+        time.sleep(0.1)  # Add a small delay to avoid high CPU usage in the loop
+
+def interpret_feedback(feedback):
+    # Parse feedback and execute corresponding actions
+    if feedback == "feedback-1":
+        print("Erased Successful")
+        # Add code to display "Erased Successful" or execute any other action
+
+def erase_memory():
+    ser = open_serial_port(baudrate)
+    if not ser:
+        print("Serial port not available.")
+        return
+    try:
+        send_payload(ser, 68, 1, 90, 90, 90, 90, 90, 90, 90, 90, 90)
+    except serial.SerialException as e:
+        print(f"Error writing to serial port: {e}")
+    print("Memory erase command sent.")
+    threading.Thread(target=listen_feedback, args=(ser,)).start()  # Start listening for feedback
+    # You can start listening for feedback after sending any other payload as well
+    ser.close()
+
+# Add other functions and GUI elements as needed
+
+def main():
+    # Implement the main function as before, creating the GUI and defining button actions
+    pass
+
+if __name__ == "__main__":
+    main()
+
+
+import serial
+import threading
+import time
+
+baudrate = 9600
+
+def open_serial_port():
+    try:
+        port = "COM5"  # Replace with your specific COM port
+        ser = serial.Serial(port, baudrate)
+        return ser
+    except Exception as e:
+        print(f"Error opening the serial port: {e}")
+        return None
+
+def listen_feedback(ser):
+    while True:
+        if ser.in_waiting > 0:
+            feedback = ser.readline().decode().strip()  # Assuming feedback is sent as ASCII string
+            print("Received feedback:", feedback)
+            interpret_feedback(feedback)  # Interpret and execute actions based on feedback
+        time.sleep(0.1)  # Add a small delay to avoid high CPU usage in the loop
+
+def interpret_feedback(feedback):
+    # Parse feedback and execute corresponding actions
+    if feedback == "feedback-1":
+        print("Erased Successful")
+        # Add code to display "Erased Successful" or execute any other action
+    elif feedback == "feedback-2":
+        print("Erase Failure")
+        # Add code to handle erase failure
+    # Add more conditions for other feedback IDs as needed
+
+def erase_memory():
+    ser = open_serial_port()
+    if not ser:
+        print("Serial port not available.")
+        return
+    try:
+        send_payload(ser, 68, 1, 90, 90, 90, 90, 90, 90, 90, 90, 90)
+    except serial.SerialException as e:
+        print(f"Error writing to serial port: {e}")
+    print("Memory erase command sent.")
+    threading.Thread(target=listen_feedback, args=(ser,)).start()  # Start listening for feedback
+    ser.close()
+
+# Add other functions and payload sending logic here
+
+# Call erase_memory function or other functions to initiate actions
+
+
+
+def interpret_feedback(feedback):
+    # Parse feedback and execute corresponding actions
+    if feedback == "feedback-1":
+        print("Erased Successful")
+        # Add code to display "Erased Successful" or execute any other action
+    elif feedback == "feedback-2":
+        print("Erase Failure")
+        # Add code to handle erase failure
+    # Add more conditions for other feedback IDs as needed
+
+def erase_memory():
+    ser = open_serial_port()
+    if not ser:
+        print("Serial port not available.")
+        return
+    try:
+        send_payload(ser, 68, 1, 90, 90, 90, 90, 90, 90, 90, 90, 90)
+    except serial.SerialException as e:
+        print(f"Error writing to serial port: {e}")
+    print("Memory erase command sent.")
+    threading.Thread(target=listen_feedback, args=(ser,)).start()  # Start listening for feedback
+    ser.close()
+
+# Add other functions and payload sending logic here
+
+def main():
+    window = tk.Tk()
+    window.title("Bootloader")
+    window.geometry("400x400")
+
+    # Define GUI elements and layout here
+
+    # Example button to initiate memory erasure
+    erase_button = tk.Button(window, text="Erase Memory", command=erase_memory)
+    erase_button.pack()
+
+    window.mainloop()
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+# def feedback(feedback_id, *data):
+    
+#     feedback_messages = {
+#         1: "Erased Successful",
+#         2: "Erase Failure",
+#         3: "Frame Received",
+#         4: "Frame Receive Failure",
+#         5: "Checksum Data",
+#         6: "Program Size Received",
+#         7: "Flashed Status Received",
+#         8: "App Sign failure"
+#     }
+    
+
+#     mil_gaya = listen_inputs()
+#     print(mil_gaya)
+#     if feedback_id in feedback_messages:
+#         feedback_message = feedback_messages[feedback_id]
+#         print(f"Feedback ID: {feedback_id} - {feedback_message}")
+
+#         if feedback_id == 1:
+#             print("Erased successful. Ready for flashing.")
+
+#         elif feedback_id == 2:
+#             print("Erase operation failed. Retrying...")
+
+#         elif feedback_id == 3:
+#             requested_frame_number = data[0] if data else None
+#             print(f"Frame {requested_frame_number} received successfully.")
+
+#         elif feedback_id == 4:
+#             print("Frame receive failure. Resending frame...")
+
+#         elif feedback_id == 5:
+#             checksum_value = data
+#             print(f"Received checksum: {checksum_value}")
+
+#         elif feedback_id == 6:
+#             program_size = data[0] if data else None
+#             print(f"Program size received: {program_size} bytes.")
+
+#         elif feedback_id == 7:
+#             print("Firmware flashed successfully.")
+
+#         elif feedback_id == 8:
+#             print("Application signature failure.")
+
+#         else:
+#             print(f"Unknown feedback ID: {feedback_id}")
+
+#     else:
+#         print(f"Invalid Feedback ID: {feedback_id}")
+
+
+
+
+
+
+# def listen_inputs():
+#     ser = open_serial_port(baudrate)
+#     if not ser:
+#         print("Serial port not available.")
+#         return None
+    
+#     try:
+#         while True:
+#             if ser.in_waiting > 0:
+#                 incoming_data = ser.read(ser.in_waiting)
+#                 return incoming_data
+#             time.sleep(0.1) 
+#     finally:
+#         ser.close() 
+
+        
+        
+
+
+# def listenUltraProxMax():
+#     mil_gaya = listen_inputs()
+#     print(mil_gaya)
+    
+    
+
+
+
+    
+# def feedback(feedback_id, *data):
+    
+#     feedback_messages = {
+#         1: "Erased Successful",
+#         2: "Erase Failure",
+#         3: "Frame Received",
+#         4: "Frame Receive Failure",
+#         5: "Checksum Data",
+#         6: "Program Size Received",
+#         7: "Flashed Status Received",
+#         8: "App Sign failure"
+#     }
+    
+
+#     mil_gaya = listen_inputs()
+#     print(mil_gaya)
+#     if feedback_id in feedback_messages:
+#         feedback_message = feedback_messages[feedback_id]
+#         print(f"Feedback ID: {feedback_id} - {feedback_message}")
+
+#         if feedback_id == 1:
+#             print("Erased successful. Ready for flashing.")
+
+#         elif feedback_id == 2:
+#             print("Erase operation failed. Retrying...")
+
+#         elif feedback_id == 3:
+#             requested_frame_number = data[0] if data else None
+#             print(f"Frame {requested_frame_number} received successfully.")
+
+#         elif feedback_id == 4:
+#             print("Frame receive failure. Resending frame...")
+
+#         elif feedback_id == 5:
+#             checksum_value = data
+#             print(f"Received checksum: {checksum_value}")
+
+#         elif feedback_id == 6:
+#             program_size = data[0] if data else None
+#             print(f"Program size received: {program_size} bytes.")
+
+#         elif feedback_id == 7:
+#             print("Firmware flashed successfully.")
+
+#         elif feedback_id == 8:
+#             print("Application signature failure.")
+
+#         else:
+#             print(f"Unknown feedback ID: {feedback_id}")
+
+#     else:
+#         print(f"Invalid Feedback ID: {feedback_id}")
+
+
+
+    
+def listen_feedback(ser):
+    while True:
+        if ser.in_waiting > 0:
+            feedback = ser.readline().decode().strip()  # Assuming feedback is sent as ASCII string
+            print("Received feedback:", feedback)
+            interpret_feedback(feedback)  # Interpret and execute actions based on feedback
+        time.sleep(0.1)  # Add a small delay to avoid high CPU usage in the loop
+        
+def interpret_feedback(feedback):
+    # Parse feedback and execute corresponding actions
+    if feedback.startswith("67"):
+        sub_id = int(feedback[2])
+        feedback_id = int(feedback[3])
+        if sub_id == 0:  # Display UART
+            if feedback_id == 1:
+                print("Erased Successful")
+            elif feedback_id == 2:
+                print("Erase Failure")
+            # Add more feedback IDs as needed
+        elif sub_id == 1:  # BLE UART
+            if feedback_id == 1:
+                print("Erased Successful")
+            elif feedback_id == 2:
+                print("Erase Failure")
+            # Add more feedback IDs as needed
+    else:
+        print("Invalid feedback format")
+
+
+        
+        
+def interpret_feedback(feedback):
+    # Parse feedback and execute corresponding actions
+    if feedback == "feedback-1":
+        print("Erased Successful")
+ 
+ 
+ 
+ def open_serial_port(baudrate):
+    try:
+        port = get_usb_port()
+        if port:
+            ser = serial.Serial(port, baudrate)
+            return ser
+        else:
+            print("Error: USB port not found.")
+            return None
+    except Exception as e:
+        print(f"Error opening the serial port: {e}")
+        return None
+    
+    
+    
+    
+    
+async def flash_firmware(file_label_text, baudrate, progress_label):
+    # Check file label format
+    file_prefix = "Selected File: "
+    if not file_label_text.startswith(file_prefix):
+        print("Invalid file label format.")
+        return
+
+    # Extract file path
+    file_path = file_label_text[len(file_prefix):]
+    if not file_path:
+        print("Please select a file.")
+        return
+
+    print(f"File path: {file_path}")  # Debugging print statement
+
+    try:
+        # Read file data
+        with open(file_path, "rb") as f:
+            file_data = f.read()
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+        return
+    except Exception as e:
+        print(f"Error opening file: {e}")
+        return
+
+    # Open serial port
+    ser = open_serial_port(baudrate)
+    if not ser:
+        print("Serial port not available.")
+        return
+
+    print(f"vanilla length of file: {len(file_data)}")
+    total_frames = math.ceil(len(file_data) / 8)
+    print(f"After ceiling to the next number {total_frames}")
+
+    # Loop through frames and send data
+    progress = 0
+    frame_num = 1
+    payload_size = 8  # Adjust payload size according to your protocol
+    for i in range(0, len(file_data), payload_size):
+        payload = file_data[i:i+payload_size]
+        frame_num = (i // payload_size) + 1
+
+        try:
+            send_payload(ser, 68, 3, frame_num, *payload)
+            await asyncio.sleep(0.05)  # Delay for stability
+            progress = (i / len(file_data)) * 100
+            progress_label.config(text=f"Progress: {progress:.2f}%")
+        except serial.SerialException as e:
+            print(f"Error writing to serial port: {e}")
+            break
+
+    print("Firmware flashing completed.")
+    ser.close()
+
+
+
+
+
+
+    
+    
+    
+    
+
+
+
+
+
+# async def flash_firmware(file_label_text, baudrate, progress_label):
+#     # Check file label format
+#     file_prefix = "Selected File: "
+#     if not file_label_text.startswith(file_prefix):
+#         print("Invalid file label format.")
+#         return
+
+#     # Extract file path
+#     file_path = file_label_text[len(file_prefix):]
+#     if not file_path:
+#         print("Please select a file.")
+#         return
+
+#     print(f"File path: {file_path}")  # Debugging print statement
+
+#     try:
+#         # Read file data
+#         with open(file_path, "rb") as f:
+#             file_data = f.read()
+#     except FileNotFoundError:
+#         print(f"File not found: {file_path}")
+#         return
+#     except Exception as e:
+#         print(f"Error opening file: {e}")
+#         return
+
+#     # Open serial port
+#     ser = open_serial_port(baudrate)
+#     if not ser:
+#         print("Serial port not available.")
+#         return
+
+#     print(f"vanilla length of file: {len(file_data) / 8}")
+#     total_frames = math.ceil(len(file_data) / 8)
+#     print(f"After ceiling to the next number {total_frame}")
+
+#     # Loop through frames and send data
+#     frame_num = 1
+#     progress = 0
+#     for _ in range(total_frames):
+#         start_index = (frame_num - 1) * 8
+#         print(f"Start index {start_index}")
+
+#         end_index = min(frame_num * 8, len(file_data))
+#         print(f"end Index {end_index}")
+#         payload = file_data[start_index:end_index]
+#         print(len(file_data[start_index:end_index]))
+#         print(f"before bytes payload meaning vanilla payload {payload}")
+#         payload = bytes(payload)
+#         print(f"Length of the payload {len(payload)}")
+#         print(f"after bytes payload {payload}")
+#         print(f"initial frame number {frame_num}")
+
+#         try:
+#             print(*payload)
+#             payload_values = ' '.join(str(byte) for byte in payload)
+#             print(f"{ser} 68 3 {frame_num} {payload_values}")
+#             send_payload(ser, 68, 3, frame_num, *payload)
+#             frame_num += 1
+#             if frame_num >= 255:
+#                 frame_num = 1
+#             t = time.localtime()
+#             current_time = time.strftime("%H:%M:%S", t)
+#             print(current_time)
+#             # Delay for 50 ms after the first payload is sent
+#             await asyncio.sleep(5)
+#             t = time.localtime()
+#             current_time = time.strftime("%H:%M:%S", t)
+#             print(current_time)
+#             print("after")
+
+# # Calculate percentage based on total_frames and current frame_num
+#             new_progress = ((frame_num - 1) / total_frames) * 100
+#             if new_progress > progress:  # Only update progress if it's increased
+#                 progress = new_progress
+#                 progress_label.config(text=f"Progress: {progress:.2f}%")
+            
+
+#         except serial.SerialException as e:
+#             print(f"Error writing to serial port: {e}")
+#             break
+
+#     print("Firmware flashing completed.")
+#     ser.close()
+
+    
+# async def flash_firmware(file_label_text, baudrate, progress_label):
+#     # Check file label format
+#     file_prefix = "Selected File: "
+#     if not file_label_text.startswith(file_prefix):
+#         print("Invalid file label format.")
+#         return
+    
+#     # Extract file path
+#     file_path = file_label_text[len(file_prefix):]
+#     if not file_path:
+#         print("Please select a file.")
+#         return
+
+#     print(f"File path: {file_path}")  # Debugging print statement
+
+#     try:
+#         # Read file data
+#         with open(file_path, "rb") as f:
+#             file_data = f.read()
+#     except FileNotFoundError:
+#         print(f"File not found: {file_path}")
+#         return
+#     except Exception as e:
+#         print(f"Error opening file: {e}")
+#         return
+
+#     # Open serial port
+#     ser = open_serial_port(baudrate)
+#     if not ser:
+#         print("Serial port not available.")
+#         return
+
+#     print(f"vanilla length of file: {len(file_data) / 8}")
+#     total_frames = math.ceil(len(file_data) / 8)
+#     print(f"After ceiling to the next number {total_frame}")
+    
+#     # Loop through frames and send data
+#     frame_num = 1
+#     for _ in range(total_frames):
+#         start_index = (frame_num - 1) * 8
+#         print(f"Start index {start_index}")
+
+#         end_index = min(frame_num * 8, len(file_data))
+#         print(f"end Index {end_index}")
+#         payload = file_data[start_index:end_index]
+#         print(f"before bytes payload meaning vanilla payload {payload}")
+#         payload = bytes(payload)
+#         print(f"Length of the payload {len(payload)}")
+#         print(f"after bytes payload {payload}")
+#         print(f"initial frame number {frame_num}")
+
+#         try:
+#             print(*payload)
+#             payload_values = ' '.join(str(byte) for byte in payload)
+#             print(f"{ser} 68 3 {frame_num} {payload_values}")
+#             send_payload(ser, 68, 3, frame_num, *payload)
+#             frame_num += 1
+#             if frame_num == 255:
+#                 frame_num = 1
+#             t = time.localtime()
+#             current_time = time.strftime("%H:%M:%S", t)
+#             print(current_time)
+#             # Delay for 50 ms after the first payload is sent
+#             await asyncio.sleep(0.05)
+#             t = time.localtime()
+#             current_time = time.strftime("%H:%M:%S", t)
+#             print(current_time)
+#             print("after")
+            
+#             # Calculate percentage based on total_frames and current frame_num
+#             percentage = ((frame_num - 1) / total_frames) * 100
+#             progress_label.config(text=f"Progress: {percentage:.2f}%")
+            
+#         except serial.SerialException as e:
+#             print(f"Error writing to serial port: {e}")
+#             break
+
+#     print("Firmware flashing completed.")
+#     ser.close()
+
+

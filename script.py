@@ -16,6 +16,20 @@ def get_usb_port():
 baudrate=9600
 
 
+def open_serial_port(baudrate):
+    try:
+        port = get_usb_port()
+        if port:
+            ser = serial.Serial(port, baudrate)
+            return ser
+        else:
+            print("Error: USB port not found.")
+            return None
+    except Exception as e:
+        print(f"Error opening the serial port: {e}")
+        return None
+
+
 
 def upload_file(file_label_text,baudrate=9600):
     print(baudrate)
@@ -42,32 +56,74 @@ def upload_file(file_label_text,baudrate=9600):
         return
     return file_data 
 
+def file():
+    upload_file()
+
 
 def import_file(file_label):
     return lambda: upload_file(file_label)
 
-def open_serial_port(baudrate):
-    try:
-        port = get_usb_port()
-        if port:
-            ser = serial.Serial(port, baudrate)
-            return ser
-        else:
-            print("Error: USB port not found.")
-            return None
-    except Exception as e:
-        print(f"Error opening the serial port: {e}")
-        return None
 
+
+def cal_checksum(*payload_bytes):
+    print(*payload_bytes)
+    checksum = payload_bytes[0]
+    for byte in payload_bytes[1:]:  
+        checksum ^= byte
+    print(checksum)
+    return checksum
+
+
+def send_checksum_payload(ser, main_id, sequence_id, *payload_bytes):
+    before_check_sum = [main_id, sequence_id, *payload_bytes]
+    print(before_check_sum)
+    
+    checksum = cal_checksum(*before_check_sum)
+    print(checksum)
+    payload = before_check_sum + [checksum] 
+    print(payload)
+    ser.write(payload)
+    print(ser, main_id, sequence_id, *payload_bytes)
+    print(f"Checksum Payload: {payload}")
     
     
+def checksum_payload():
+    ser = open_serial_port(baudrate)
+    if not ser:
+        print("Serial port not available.")
+        return
+    try:
+        send_checksum_payload(ser, 68, 4,90,90,90,90,90,90,90,90,90)
+    except serial.SerialException as e:
+        print(f"Error writing to serial port: {e}")
+    print("Checksum payload sent.")
+    ser.close()
+
+
+
+def send_payload(ser, main_id, sequence_id, *payload_bytes):
+    print(f"vanilla payload {payload_bytes}")
+
+    before_check_sum = [main_id, sequence_id, *payload_bytes]
+    
+    checksum = cal_checksum(*before_check_sum)
+    print(f"checksum {checksum}")
+
+    payload = before_check_sum + [checksum] 
+    print(f"after adding checksum {payload}")
+
+    ser.write(payload)
+    print(ser, main_id, sequence_id, *payload_bytes)
+    print(f"Payload sent: {payload}")
+
+
 async def flash_firmware(file_label_text, baudrate, progress_label):
     # Check file label format
     file_prefix = "Selected File: "
     if not file_label_text.startswith(file_prefix):
         print("Invalid file label format.")
         return
-    
+
     # Extract file path
     file_path = file_label_text[len(file_prefix):]
     if not file_path:
@@ -93,50 +149,38 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
         print("Serial port not available.")
         return
 
-    print(f"vanilla length of file: {len(file_data) / 8}")
+    print(f"vanilla length of file: {len(file_data)}")
     total_frames = math.ceil(len(file_data) / 8)
-    print(f"After ceiling to the next number {total_frame}")
-    
-    # Loop through frames and send data
-    frame_num = 1
-    for _ in range(total_frames):
-        start_index = (frame_num - 1) * 8
-        print(f"Start index {start_index}")
+    print(f"After ceiling to the next number {total_frames}")
 
-        end_index = min(frame_num * 8, len(file_data))
-        print(f"end Index {end_index}")
+    # Loop through frames and send data
+    progress = 0
+    frame_num = 1
+    payload_size = 7  # Adjust payload size according to your protocol
+    while frame_num <= total_frames:
+        start_index = (frame_num - 1) * payload_size
+        end_index = min(start_index + payload_size, len(file_data))
         payload = file_data[start_index:end_index]
-        print(f"before bytes payload meaning vanilla payload {payload}")
-        payload = bytes(payload)
-        print(f"Length of the payload {len(payload)}")
-        print(f"after bytes payload {payload}")
-        print(f"initial frame number {frame_num}")
 
         try:
-            print(*payload)
-            payload_values = ' '.join(str(byte) for byte in payload)
-            print(f"{ser} 68 3 {frame_num} {payload_values}")
             send_payload(ser, 68, 3, frame_num, *payload)
-            frame_num += 1
-            if frame_num >= 255:
-                frame_num = 1
-            t = time.localtime()
-            current_time = time.strftime("%H:%M:%S", t)
-            print(current_time)
-            # Delay for 50 ms after the first payload is sent
-            await asyncio.sleep(0.05)
-            t = time.localtime()
-            current_time = time.strftime("%H:%M:%S", t)
-            print(current_time)
-            print("after")
+            await asyncio.sleep(0.25)  # Delay for stability
             
-            # Calculate percentage based on total_frames and current frame_num
-            percentage = ((frame_num - 1) / total_frames) * 100
-            progress_label.config(text=f"Progress: {percentage:.2f}%")
-            
+            # Wait for feedback
+            while True:
+                if ser.in_waiting > 0:
+                    incoming_data = ser.read(ser.in_waiting)
+                    print(f"incoming data: {incoming_data}")
+                    await process_feedback(incoming_data)
+                    break
+                await asyncio.sleep(0.05)  # Wait for feedback
         except serial.SerialException as e:
             print(f"Error writing to serial port: {e}")
             break
+        
+        frame_num += 1
+        progress = (frame_num / total_frames) * 100
+        progress_label.config(text=f"Progress: {progress:.2f}%")
 
     print("Firmware flashing completed.")
     ser.close()
@@ -156,7 +200,6 @@ def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
     elapsed_time = end_time - start_time
     print(f"Time taken: {elapsed_time} seconds")
 
-    time.sleep(0.05)
 
 def reset_firmware():
     
@@ -208,15 +251,6 @@ def break_down_program_size(file_label_text):
     return size_byte_1, size_byte_2, size_byte_3, size_byte_4
     
  
-
-def cal_checksum(*payload_bytes):
-    print(*payload_bytes)
-    checksum = payload_bytes[0]
-    for byte in payload_bytes[1:]:  
-        checksum ^= byte
-    print(checksum)
-    return checksum
-
     
 def program_size(file_label):
     file_data = upload_file(file_label)
@@ -237,7 +271,6 @@ def program_size(file_label):
     print("Program Size command sent.")
         
     
-
 def erase_memory():
     ser = open_serial_port(baudrate)
     print(ser)
@@ -245,52 +278,19 @@ def erase_memory():
         print("Serial port not available.")
         return
     try:
-        send_payload(ser, 68, 1,90,90,90,90,90,90,90,90,90)
+        send_payload(ser, 68, 1, 90, 90, 90, 90, 90, 90, 90, 90, 90)
+        while True:
+            if ser.in_waiting > 0:
+                incoming_data = ser.read(ser.in_waiting)
+                print(f"incoming data: {incoming_data}")
+                process_feedback(incoming_data)
+                break
     except serial.SerialException as e:
         print(f"Error writing to serial port: {e}")
     print("Memory erase command sent.")
     ser.close()
 
 
-
-    
-    
-def send_checksum_payload(ser, main_id, sequence_id, *payload_bytes):
-    before_check_sum = [main_id, sequence_id, *payload_bytes]
-    print(before_check_sum)
-    
-    checksum = cal_checksum(*before_check_sum)
-    print(checksum)
-    payload = before_check_sum + [checksum] 
-    print(payload)
-    ser.write(payload)
-    print(ser, main_id, sequence_id, *payload_bytes)
-    print(f"Checksum Payload: {payload}")
-    
-    
-def checksum_payload():
-    ser = open_serial_port(baudrate)
-    if not ser:
-        print("Serial port not available.")
-        return
-    try:
-        send_checksum_payload(ser, 68, 4,90,90,90,90,90,90,90,90,90)
-    except serial.SerialException as e:
-        print(f"Error writing to serial port: {e}")
-    print("Checksum payload sent.")
-    ser.close()
-
-def send_payload(ser, main_id, sequence_id, *payload_bytes):
-    before_check_sum = [main_id, sequence_id, *payload_bytes]
-    print(before_check_sum)
-    
-    checksum = cal_checksum(*before_check_sum)
-    print(checksum)
-    payload = before_check_sum + [checksum] 
-    print(payload)
-    ser.write(payload)
-    print(ser, main_id, sequence_id, *payload_bytes)
-    print(f"Payload sent: {payload}")
     
     
 def application_flashed_properly_payload():
@@ -322,7 +322,12 @@ def display():
     print("Display  payload command sent.")
     ser.close()
    
-async def listen_inputs(callback):
+
+
+
+
+
+def listen_inputs(callback, feedback_label):
     ser = open_serial_port(baudrate)
     if not ser:
         print("Serial port not available.")
@@ -332,53 +337,136 @@ async def listen_inputs(callback):
         while True:
             if ser.in_waiting > 0:
                 incoming_data = ser.read(ser.in_waiting)
-                callback(incoming_data)
-            await asyncio.sleep(0.05)
-
+                print(incoming_data + " incoming data")
+                callback(incoming_data, feedback_label)
+            t = time.localtime()
+            current_time = time.strftime("%H:%M:%S", t)
+            # print(current_time)
+            time.sleep(0.05)
+            t = time.localtime()
+            current_time = time.strftime("%H:%M:%S", t)
+            # print(current_time)
+            print("after")
     finally:
-        ser.close()  # Close the serial port when done
+        ser.close() 
 
-def process_feedback(data):
+
+# def listenUltraProxMax():
+#     threading.Thread(target=listen_inputs, args=(process_feedback, feedback_label)).start()
+
+async def listen(serial_port, callback, feedback_label):
+    try:
+        while True:
+            if serial_port.in_waiting > 0:
+                incoming_data = serial_port.read(serial_port.in_waiting)
+                callback(incoming_data, feedback_label)
+            await asyncio.sleep(0.05)
+    except asyncio.CancelledError:
+        print("Listening cancelled.")
+
+def start_listening(serial_port, callback, feedback_label):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.create_task(listen(serial_port, callback, feedback_label))
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        loop.close()
+
+def listenUltraProxMax():
+    ser = open_serial_port(baudrate)
+    if not ser:
+        print("Serial port not available.")
+        return
+    try:
+        start_listening(ser, process_feedback, feedback_label)
+    except Exception as e:
+        print(f"Error listening: {e}")
+
+    
+    
+
+
+def send_next_frame(ser, frame_num, file_data):
+    # Adjust the payload size according to your protocol
+    payload_size = 7
+    start_index = (frame_num - 1) * payload_size
+    end_index = min(start_index + payload_size, len(file_data))
+    payload = file_data[start_index:end_index]
+
+    try:
+        send_payload(ser, 68, 3, frame_num, *payload)
+    except Exception as e:
+        print(f"Error sending frame {frame_num}: {e}")
+
+
+
+
+
+async def process_feedback(data):
+    # Process feedback data
     if len(data) != 8:
         print("Invalid feedback payload length")
         return
-
-    feedback_id = data[1]
-    d1 = data[2]
-    d2 = data[3]
-    d3 = data[4]
-    d4 = data[5]
-    checksum = data[6]
-
-    # Calculate the checksum of the received data
-    calculated_checksum = sum(data[1:6]) & 0xFF  # Calculate checksum using XOR
-
-    # Compare calculated checksum with received checksum
-    if calculated_checksum != checksum:
-        print("Checksum mismatch")
-        return
+    
+    main_id = data[0]
+    sub_id = data[1]
+    feedback_id = data[2]
+    d1 = data[3]
+    d2 = data[4]
+    d3 = data[5]
+    d4 = data[6]
+    checksum = data[7]
 
     feedback_messages = {
         1: "Erased Successful",
         2: "Erase Failure",
         3: f"Frame Received (Requested Frame Number: {d1})",
         4: "Frame Receive Failure",
-        5: f"Checksum Data (Checksum Value: {d1}{d2}{d3}{d4})",
+        5: f"Checksum Data (Checksum Value: {d1},{d2},{d3},{d4})",
         6: f"Program Size Received ({d1} bytes)",
         7: "Flashed Status Received",
-        8: "App Sign failure"
+        8: "App Sign Failure"
     }
 
     if feedback_id in feedback_messages:
         feedback_message = feedback_messages[feedback_id]
-        feedback_label.config(text=feedback_message)  # Update label with feedback message
+        if feedback_id == 2:
+            print("Repeating erase operation")
+            await erase_memory()
+        elif feedback_id == 3:
+            print(f"Sending next requested frame: {d1}")
+            threading.Thread(target=send_next_frame, args=(get_usb_port(), d1, file_data)).start()  # Automatically send the next frame
+        elif feedback_id == 4:
+            print("Resending the failed frame")
+            # Resend the failed frame
+            threading.Thread(target=send_failed_frame, args=(get_usb_port(), d1, file_data)).start()
+        elif feedback_id == 5:
+            checksum_feedback = cal_checksum(d1, d2, d3, d4)
+            print(f"Received checksum: {checksum}, Calculated checksum: {checksum_feedback}")
+            if checksum == checksum_feedback:
+                print("Checksum verification successful. Proceed with data processing.")
+            else:
+                print("Checksum verification failed. Resend the frame or take appropriate action.")
+        feedback_label.config(text=feedback_message) 
         print(f"Feedback ID: {feedback_id} - {feedback_message}")
     else:
         print(f"Unknown Feedback ID: {feedback_id}")
+    
+    print(f"Main ID: {main_id}, Sub ID: {sub_id}")
+def send_failed_frame(ser, failed_frame_num, file_data):
+    # Resend the failed frame
+    payload_size = 7  # Adjust payload size according to your protocol
+    start_index = (failed_frame_num - 1) * payload_size
+    end_index = min(start_index + payload_size, len(file_data))
+    payload = file_data[start_index:end_index]
 
-
-def listenUltraProxMax():
-    threading.Thread(target=listen_inputs, args=(process_feedback,)).start()
+    try:
+        send_payload(ser, 68, 3, failed_frame_num, *payload)
+    except Exception as e:
+        print(f"Error resending frame {failed_frame_num}: {e}")
 
 def import_file(file_label):
     file_path = filedialog.askopenfilename()
@@ -430,15 +518,20 @@ def main():
     app_flashed_button = tk.Button(window, text="Application Flashed Properly", command=application_flashed_properly_payload)
     app_flashed_button.pack()
     
+   
+    
     
     display_button = tk.Button(window, text="Display Flashed Properly", command=display)
     display_button.pack()
     
+    # feedback_button = tk.Button(window, text="feedback lelo", command=listenUltraProxMax)
+    # feedback_button.pack()
+    
+    
+    
     global feedback_label
     feedback_label = tk.Label(window, text="", wraplength=300)
     feedback_label.pack()
-    
-    listenUltraProxMax()
     
     footer_frame = tk.Frame(main_container)
     footer_label = tk.Label(footer_frame, text="EMotorad", foreground="white", background="green", width=100)
@@ -450,8 +543,16 @@ def main():
 
     main_container.pack(fill=tk.BOTH, expand=True)
 
-
+    # listenUltraProxMax()
     window.mainloop()
 
 if __name__ == "__main__":
     main()
+    
+    
+    
+    
+    
+    
+    
+    
