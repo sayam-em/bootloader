@@ -44,7 +44,7 @@ def upload_file(file_label_text,baudrate=9600):
         return
 
     print("File path:", file_path)
-
+    global file_data
     try:
         with open(file_path, "rb") as f:
             file_data = f.read()
