@@ -167,13 +167,13 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
             await asyncio.sleep(0.25)  # Delay for stability
             
             # Wait for feedback
-            while True:
-                if ser.in_waiting > 0:
-                    incoming_data = ser.read(ser.in_waiting)
-                    print(f"incoming data: {incoming_data}")
-                    await process_feedback(incoming_data)
-                    break
-                await asyncio.sleep(0.05)  # Wait for feedback
+            # while True:
+            #     if ser.in_waiting > 0:
+            #         incoming_data = ser.read(ser.in_waiting)
+            #         print(f"incoming data: {incoming_data}")
+            #         await process_feedback(incoming_data)
+            #         break
+            await asyncio.sleep(0.05)  # Wait for feedback
         except serial.SerialException as e:
             print(f"Error writing to serial port: {e}")
             break
@@ -279,12 +279,12 @@ def erase_memory():
         return
     try:
         send_payload(ser, 68, 1, 90, 90, 90, 90, 90, 90, 90, 90, 90)
-        while True:
-            if ser.in_waiting > 0:
-                incoming_data = ser.read(ser.in_waiting)
-                print(f"incoming data: {incoming_data}")
-                process_feedback(incoming_data)
-                break
+        # while True:
+        #     if ser.in_waiting > 0:
+        #         incoming_data = ser.read(ser.in_waiting)
+        #         print(f"incoming data: {incoming_data}")
+        #         process_feedback(incoming_data)
+        #         break
     except serial.SerialException as e:
         print(f"Error writing to serial port: {e}")
     print("Memory erase command sent.")
@@ -325,69 +325,37 @@ def display():
 
 
 
-
-
-def listen_inputs(callback, feedback_label):
+def start_listening_if_needed(callback, feedback_label):
     ser = open_serial_port(baudrate)
     if not ser:
         print("Serial port not available.")
         return
     
     try:
-        while True:
-            if ser.in_waiting > 0:
-                incoming_data = ser.read(ser.in_waiting)
-                print(incoming_data + " incoming data")
-                callback(incoming_data, feedback_label)
-            t = time.localtime()
-            current_time = time.strftime("%H:%M:%S", t)
-            # print(current_time)
-            time.sleep(0.05)
-            t = time.localtime()
-            current_time = time.strftime("%H:%M:%S", t)
-            # print(current_time)
-            print("after")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.create_task(listen(ser, callback, feedback_label))
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
     finally:
-        ser.close() 
+        loop.close() 
 
-
-# def listenUltraProxMax():
-#     threading.Thread(target=listen_inputs, args=(process_feedback, feedback_label)).start()
+def listenUltraProxMax():
+    start_listening_if_needed(process_feedback, feedback_label)
 
 async def listen(serial_port, callback, feedback_label):
+    listening = True  # Flag to control listening
     try:
-        while True:
+        while listening:  # Loop while listening flag is True
             if serial_port.in_waiting > 0:
                 incoming_data = serial_port.read(serial_port.in_waiting)
                 callback(incoming_data, feedback_label)
             await asyncio.sleep(0.05)
     except asyncio.CancelledError:
         print("Listening cancelled.")
-
-def start_listening(serial_port, callback, feedback_label):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.create_task(listen(serial_port, callback, feedback_label))
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
     finally:
-        loop.close()
-
-def listenUltraProxMax():
-    ser = open_serial_port(baudrate)
-    if not ser:
-        print("Serial port not available.")
-        return
-    try:
-        start_listening(ser, process_feedback, feedback_label)
-    except Exception as e:
-        print(f"Error listening: {e}")
-
-    
-    
-
+        listening = False 
 
 def send_next_frame(ser, frame_num, file_data):
     # Adjust the payload size according to your protocol
@@ -456,6 +424,7 @@ async def process_feedback(data):
         print(f"Unknown Feedback ID: {feedback_id}")
     
     print(f"Main ID: {main_id}, Sub ID: {sub_id}")
+    
 def send_failed_frame(ser, failed_frame_num, file_data):
     # Resend the failed frame
     payload_size = 7  # Adjust payload size according to your protocol
@@ -543,7 +512,7 @@ def main():
 
     main_container.pack(fill=tk.BOTH, expand=True)
 
-    # listenUltraProxMax()
+    listenUltraProxMax()
     window.mainloop()
 
 if __name__ == "__main__":

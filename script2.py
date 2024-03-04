@@ -660,3 +660,86 @@ if __name__ == "__main__":
 #     ser.close()
 
 
+
+
+
+
+
+
+
+# def listen_inputs(callback, feedback_label):
+#     ser = open_serial_port(baudrate)
+#     if not ser:
+#         print("Serial port not available.")
+#         return
+    
+#     try:
+#         while True:
+#             if ser.in_waiting > 0:
+#                 incoming_data = ser.read(ser.in_waiting)
+#                 print(incoming_data + " incoming data")
+#                 callback(incoming_data, feedback_label)
+#             t = time.localtime()
+#             current_time = time.strftime("%H:%M:%S", t)
+#             # print(current_time)
+#             time.sleep(0.05)
+#             t = time.localtime()
+#             current_time = time.strftime("%H:%M:%S", t)
+#             # print(current_time)
+#             print("after")
+#     finally:
+#         ser.close() 
+
+
+# # def listenUltraProxMax():
+# #     threading.Thread(target=listen_inputs, args=(process_feedback, feedback_label)).start()
+
+
+
+# def start_listening(serial_port, callback, feedback_label):
+#     loop = asyncio.new_event_loop()
+#     asyncio.set_event_loop(loop)
+#     try:
+#         loop.create_task(listen(serial_port, callback, feedback_label))
+#         loop.run_forever()
+#     except KeyboardInterrupt:
+#         pass
+#     finally:
+#         loop.close()
+
+# def listenUltraProxMax():
+#     ser = open_serial_port(baudrate)
+#     if not ser:
+#         print("Serial port not available.")
+#         return
+#     try:
+#         start_listening(ser, process_feedback, feedback_label)
+#     except Exception as e:
+#         print(f"Error listening: {e}")
+
+    
+    
+    
+ 
+def listen_inputs(callback, feedback_label):
+    def listen(serial_port):
+        try:
+            while True:
+                if serial_port.in_waiting > 0:
+                    incoming_data = serial_port.read(serial_port.in_waiting)
+                    callback(incoming_data, feedback_label)
+                time.sleep(0.05)
+        except Exception as e:
+            print(f"Error listening: {e}")
+
+    ser = open_serial_port(baudrate)
+    if not ser:
+        print("Serial port not available.")
+        return
+    
+    try:
+        listen_thread = threading.Thread(target=listen, args=(ser,))
+        listen_thread.start()
+        listen_thread.join()  # Wait for the thread to finish
+    finally:
+        ser.close()    
