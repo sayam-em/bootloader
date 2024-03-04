@@ -278,13 +278,9 @@ def erase_memory():
         print("Serial port not available.")
         return
     try:
-        send_payload(ser, 68, 1, 90, 90, 90, 90, 90, 90, 90, 90, 90)
-        # while True:
-        #     if ser.in_waiting > 0:
-        #         incoming_data = ser.read(ser.in_waiting)
-        #         print(f"incoming data: {incoming_data}")
-        #         process_feedback(incoming_data)
-        #         break
+            send_payload(ser, 68, 1, 90, 90, 90, 90, 90, 90, 90, 90, 90)
+            incoming_data = ser.read(ser.in_waiting)
+            print(f"incoming data: {incoming_data}")
     except serial.SerialException as e:
         print(f"Error writing to serial port: {e}")
     print("Memory erase command sent.")
@@ -357,8 +353,10 @@ async def listen(serial_port, callback, feedback_label):
     finally:
         listening = False 
 
+
+
+
 def send_next_frame(ser, frame_num, file_data):
-    # Adjust the payload size according to your protocol
     payload_size = 7
     start_index = (frame_num - 1) * payload_size
     end_index = min(start_index + payload_size, len(file_data))
@@ -369,11 +367,20 @@ def send_next_frame(ser, frame_num, file_data):
     except Exception as e:
         print(f"Error sending frame {frame_num}: {e}")
 
+def send_failed_frame(ser, failed_frame_num, file_data):
+    payload_size = 7
+    start_index = (failed_frame_num - 1) * payload_size
+    end_index = min(start_index + payload_size, len(file_data))
+    payload = file_data[start_index:end_index]
+
+    try:
+        send_payload(ser, 68, 3, failed_frame_num, *payload)
+    except Exception as e:
+        print(f"Error resending frame {failed_frame_num}: {e}")
 
 
 
-
-async def process_feedback(data):
+async def process_feedback(data, feedback_label):
     # Process feedback data
     if len(data) != 8:
         print("Invalid feedback payload length")
@@ -411,6 +418,7 @@ async def process_feedback(data):
             print("Resending the failed frame")
             # Resend the failed frame
             threading.Thread(target=send_failed_frame, args=(get_usb_port(), d1, file_data)).start()
+        
         elif feedback_id == 5:
             checksum_feedback = cal_checksum(d1, d2, d3, d4)
             print(f"Received checksum: {checksum}, Calculated checksum: {checksum_feedback}")
@@ -425,17 +433,7 @@ async def process_feedback(data):
     
     print(f"Main ID: {main_id}, Sub ID: {sub_id}")
     
-def send_failed_frame(ser, failed_frame_num, file_data):
-    # Resend the failed frame
-    payload_size = 7  # Adjust payload size according to your protocol
-    start_index = (failed_frame_num - 1) * payload_size
-    end_index = min(start_index + payload_size, len(file_data))
-    payload = file_data[start_index:end_index]
 
-    try:
-        send_payload(ser, 68, 3, failed_frame_num, *payload)
-    except Exception as e:
-        print(f"Error resending frame {failed_frame_num}: {e}")
 
 def import_file(file_label):
     file_path = filedialog.askopenfilename()

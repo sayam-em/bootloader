@@ -743,3 +743,40 @@ def listen_inputs(callback, feedback_label):
         listen_thread.join()  # Wait for the thread to finish
     finally:
         ser.close()    
+        
+        
+def send_failed_frame(ser, failed_frame_num, file_data):
+    # Resend the failed frame
+    payload_size = 7  # Adjust payload size according to your protocol
+    start_index = (failed_frame_num - 1) * payload_size
+    end_index = min(start_index + payload_size, len(file_data))
+    payload = file_data[start_index:end_index]
+
+    try:
+        send_payload(ser, 68, 3, failed_frame_num, *payload)
+    except Exception as e:
+        print(f"Error resending frame {failed_frame_num}: {e}")
+
+def send_next_frame(ser, frame_num, file_data):
+    # Adjust the payload size according to your protocol
+    payload_size = 7
+    start_index = (frame_num - 1) * payload_size
+    end_index = min(start_index + payload_size, len(file_data))
+    payload = file_data[start_index:end_index]
+
+    try:
+        send_payload(ser, 68, 3, frame_num, *payload)
+    except Exception as e:
+        print(f"Error sending frame {frame_num}: {e}")
+        
+def send_failed_frame(ser, failed_frame_num, file_data):
+    # Resend the failed frame
+    payload_size = 7  # Adjust payload size according to your protocol
+    start_index = (failed_frame_num - 1) * payload_size
+    end_index = min(start_index + payload_size, len(file_data))
+    payload = file_data[start_index:end_index]
+
+    try:
+        send_payload(ser, 68, 3, failed_frame_num, *payload)
+    except Exception as e:
+        print(f"Error resending frame {failed_frame_num}: {e}")
