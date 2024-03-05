@@ -82,12 +82,12 @@ def cal_checksum(*payload_bytes):
 
 def send_checksum_payload(ser, main_id, sequence_id, *payload_bytes):
     before_check_sum = [main_id, sequence_id, *payload_bytes]
-    print(before_check_sum)
+    # print(before_check_sum)
     
     checksum = cal_checksum(*before_check_sum)
-    print(checksum)
+    # print(checksum)
     payload = before_check_sum + [checksum] 
-    print(payload)
+    # print(payload)
     ser = open_serial_port(baudrate)
     if not ser:
         print("Serial port not available.")
@@ -98,8 +98,8 @@ def send_checksum_payload(ser, main_id, sequence_id, *payload_bytes):
         print(f"Error writing to serial port: {e}")
     print("Checksum payload sent.")
     ser.close()
-    print(ser, main_id, sequence_id, *payload_bytes)
-    print(f"Checksum Payload: {payload}")
+    # print(ser, main_id, sequence_id, *payload_bytes)
+    # print(f"Checksum Payload: {payload}")
     
     
 
@@ -107,19 +107,19 @@ def send_checksum_payload(ser, main_id, sequence_id, *payload_bytes):
 
 
 def send_payload(ser, main_id, sequence_id, *payload_bytes):
-    print(f"vanilla payload {payload_bytes}")
+    # print(f"vanilla payload {payload_bytes}")
 
     before_check_sum = [main_id, sequence_id, *payload_bytes]
     
     checksum = cal_checksum(*before_check_sum)
-    print(f"checksum {checksum}")
+    # print(f"checksum {checksum}")
 
     payload = before_check_sum + [checksum] 
-    print(f"after adding checksum {payload}")
+    # print(f"after adding checksum {payload}")
 
     ser.write(payload)
-    print(ser, main_id, sequence_id, *payload_bytes)
-    print(f"Payload sent: {payload}")
+    # print(ser, main_id, sequence_id, *payload_bytes)
+    # print(f"Payload sent: {payload}")
 
 def update_progress(progress_label, progress):
     progress_label.config(text=f"Progress: {progress:.2f}%")
@@ -180,22 +180,22 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
         # print(f"initial frame number {frame_num}")
 
         try:
-            print(*payload)
+            # print(*payload)
             payload_values = ' '.join(str(byte) for byte in payload)
-            print(f"{ser} 68 3 {frame_num} {payload_values}")
+            # print(f"{ser} 68 3 {frame_num} {payload_values}")
             send_payload(ser, 68, 3, frame_num, *payload)
             frame_num += 1
             if frame_num >= 255:
                 frame_num = 1
             t = time.localtime()
             current_time = time.strftime("%H:%M:%S", t)
-            print(current_time)
+            # print(current_time)
             # Delay for 50 ms after the first payload is sent
             await asyncio.sleep(0.05)
             t = time.localtime()
             current_time = time.strftime("%H:%M:%S", t)
-            print(current_time)
-            print("after")
+            # print(current_time)
+            # print("after")
 
             # Calculate percentage based on total_frames and current frame_num
             progress = (_ / len(file_data)) * 100
@@ -215,15 +215,15 @@ def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
     before_check_sum = [main_id, sequence_id, *payload_bytes]
     
     checksum = cal_checksum(*before_check_sum)
-    print(checksum)
+    # print(checksum)
     payload = before_check_sum + [checksum] 
-    print(payload)
+    # print(payload)
     ser.write(payload)
-    print(ser, main_id, sequence_id, *payload_bytes)
-    print(f"Transfer Data payload Payload: {payload}")
+    # print(ser, main_id, sequence_id, *payload_bytes)
+    # print(f"Transfer Data payload Payload: {payload}")
     end_time = time.time()  
     elapsed_time = end_time - start_time
-    print(f"Time taken: {elapsed_time} seconds")
+    # print(f"Time taken: {elapsed_time} seconds")
 
 
 def reset_firmware():
@@ -241,15 +241,15 @@ def reset_firmware():
 
 def ecu_reset_payload(ser, main_id, sequence_id, *payload_bytes):
     before_check_sum = [main_id, sequence_id, *payload_bytes]
-    print(before_check_sum)
+    # print(before_check_sum)
     
     checksum = cal_checksum(*before_check_sum)
-    print(checksum)
+    # print(checksum)
     payload = before_check_sum + [checksum] 
-    print(payload)
+    # print(payload)
     ser.write(payload)
     print(ser, main_id, sequence_id, *payload_bytes)
-    print(f"ECU Reset Payload: {payload}")
+    # print(f"ECU Reset Payload: {payload}")
 
 
 
