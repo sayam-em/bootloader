@@ -7,13 +7,17 @@ import asyncio
 import threading
 import time
 
+# Define global variables
+baudrate = 9600
+file_data = None
+feedback_label = None
+
 def get_usb_port():
     for port in serial.tools.list_ports.comports():
         if 'COM5' in port.description: 
             return port.device
     return None
 
-baudrate=9600
 
 
 def open_serial_port(baudrate):
@@ -32,6 +36,7 @@ def open_serial_port(baudrate):
 
 
 def upload_file(file_label_text,baudrate=9600):
+    global file_data
     print(baudrate)
     file_prefix = "Selected File: "
     if not file_label_text.startswith(file_prefix):
@@ -44,7 +49,6 @@ def upload_file(file_label_text,baudrate=9600):
         return
 
     print("File path:", file_path)
-    global file_data
     try:
         with open(file_path, "rb") as f:
             file_data = f.read()
@@ -63,6 +67,8 @@ def upload_file(file_label_text,baudrate=9600):
 def import_file(file_label):
     return lambda: upload_file(file_label)
 
+def handle_error(message):
+    print("Error:", message)
 
 
 def cal_checksum(*payload_bytes):
@@ -115,6 +121,10 @@ def send_payload(ser, main_id, sequence_id, *payload_bytes):
     print(ser, main_id, sequence_id, *payload_bytes)
     print(f"Payload sent: {payload}")
 
+def update_progress(progress_label, progress):
+    progress_label.config(text=f"Progress: {progress:.2f}%")
+def update_feedback(feedback_label, message):
+    feedback_label.config(text=message)
 
 
 async def flash_firmware(file_label_text, baudrate, progress_label):
@@ -130,7 +140,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
         print("Please select a file.")
         return
 
-    print(f"File path: {file_path}")  # Debugging print statement
+    # print(f"File path: {file_path}")  # Debugging print statement
 
     try:
         # Read file data
@@ -149,25 +159,25 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
         print("Serial port not available.")
         return
 
-    print(f"vanilla length of file: {len(file_data) / 8}")
+    # print(f"vanilla length of file: {len(file_data) / 8}")
     total_frames = math.ceil(len(file_data) / 8)
-    print(f"After ceiling to the next number {total_frame}")
+    # print(f"After ceiling to the next number {total_frame}")
 
     # Loop through frames and send data
     progress = 0
     frame_num = 1
     for _ in range(total_frames):
         start_index = (frame_num - 1) * 8
-        print(f"Start index {start_index}")
+        # print(f"Start index {start_index}")
 
         end_index = min(frame_num * 8, len(file_data))
-        print(f"end Index {end_index}")
+        # print(f"end Index {end_index}")
         payload = file_data[start_index:end_index]
-        print(f"before bytes payload meaning vanilla payload {payload}")
+        # print(f"before bytes payload meaning vanilla payload {payload}")
         payload = bytes(payload)
-        print(f"Length of the payload {len(payload)}")
-        print(f"after bytes payload {payload}")
-        print(f"initial frame number {frame_num}")
+        # print(f"Length of the payload {len(payload)}")
+        # print(f"after bytes payload {payload}")
+        # print(f"initial frame number {frame_num}")
 
         try:
             print(*payload)
@@ -199,73 +209,6 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
     ser.close()
 
 
-# async def flash_firmware(file_label_text, baudrate, progress_label):
-#     # Check file label format
-#     file_prefix = "Selected File: "
-#     if not file_label_text.startswith(file_prefix):
-#         print("Invalid file label format.")
-#         return
-
-#     # Extract file path
-#     file_path = file_label_text[len(file_prefix):]
-#     if not file_path:
-#         print("Please select a file.")
-#         return
-
-#     print(f"File path: {file_path}")  # Debugging print statement
-
-#     try:
-#         # Read file data
-#         with open(file_path, "rb") as f:
-#             file_data = f.read()
-#     except FileNotFoundError:
-#         print(f"File not found: {file_path}")
-#         return
-#     except Exception as e:
-#         print(f"Error opening file: {e}")
-#         return
-
-#     # Open serial port
-#     ser = open_serial_port(baudrate)
-#     if not ser:
-#         print("Serial port not available.")
-#         return
-
-#     print(f"vanilla length of file: {len(file_data)}")
-#     total_frames = math.ceil(len(file_data) / 8)
-#     print(f"After ceiling to the next number {total_frames}")
-
-#     # Loop through frames and send data
-#     progress = 0
-#     frame_num = 1
-#     payload_size = 7  # Adjust payload size according to your protocol
-#     while frame_num <= total_frames:
-#         start_index = (frame_num - 1) * payload_size
-#         end_index = min(start_index + payload_size, len(file_data))
-#         payload = file_data[start_index:end_index]
-
-#         try:
-#             send_payload(ser, 68, 3, frame_num, *payload)
-#             await asyncio.sleep(0.25)  # Delay for stability
-            
-#             # Wait for feedback
-#             # while True:
-#             #     if ser.in_waiting > 0:
-#             #         incoming_data = ser.read(ser.in_waiting)
-#             #         print(f"incoming data: {incoming_data}")
-#             #         await process_feedback(incoming_data)
-#             #         break
-#             # await asyncio.sleep(0.05)  # Wait for feedback
-#         except serial.SerialException as e:
-#             print(f"Error writing to serial port: {e}")
-#             break
-        
-#         frame_num += 1
-#         progress = (frame_num / total_frames) * 100
-#         progress_label.config(text=f"Progress: {progress:.2f}%")
-
-#     print("Firmware flashing completed.")
-#     ser.close()
 
 def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
     start_time = time.time()
@@ -403,37 +346,39 @@ def display():
 
 
 
-def start_listening_if_needed(callback, feedback_label):
+async def start_listening_if_needed(callback, feedback_label):
     ser = open_serial_port(baudrate)
     if not ser:
         print("Serial port not available.")
         return
     
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.create_task(listen(ser, callback, feedback_label))
-        loop.run_forever()
+        await listen(ser, callback, feedback_label)  # Await the listen coroutine directly
     except KeyboardInterrupt:
         pass
     finally:
-        loop.close() 
+        ser.close()
 
-def listenUltraProxMax():
-    start_listening_if_needed(process_feedback, feedback_label)
-
+async def listenUltraProxMax():
+    await start_listening_if_needed(process_feedback, feedback_label)
+    
+    
+    
 async def listen(serial_port, callback, feedback_label):
+    print(serial_port)
+    print(callback)
+    print(feedback_label)
     listening = True  # Flag to control listening
     try:
         while listening:  # Loop while listening flag is True
             if serial_port.in_waiting > 0:
                 incoming_data = serial_port.read(serial_port.in_waiting)
-                callback(incoming_data, feedback_label)
+                await callback(incoming_data, feedback_label)  # Await the callback coroutine
             await asyncio.sleep(0.05)
     except asyncio.CancelledError:
         print("Listening cancelled.")
     finally:
-        listening = False 
+        listening = False
 
 
 
@@ -464,8 +409,10 @@ def send_failed_frame(ser, failed_frame_num, file_data):
 
 async def process_feedback(data, feedback_label):
     # Process feedback data
+    print(data)
+    print(feedback_label)
     if len(data) != 8:
-        print("Invalid feedback payload length")
+        # print("Invalid feedback payload length")
         return
     
     main_id = data[0]
@@ -531,7 +478,7 @@ def flash_firmware_thread(file_label_text, baudrate, progress_label):
     loop.run_until_complete(flash_firmware(file_label_text, baudrate, progress_label))
     loop.close()
 
-def main():
+async def main():
     window = tk.Tk()
     window.title("Bootloader")
     window.geometry("400x400")
@@ -561,22 +508,14 @@ def main():
     program_size_button = tk.Button(window, text="Program Size", command=lambda: threading.Thread(target=program_size, args=(file_label.cget("text"),)).start())
     program_size_button.pack()
     
-    checksum_button = tk.Button(window, text="Checksum Payload", command=checksum_payload)
+    checksum_button = tk.Button(window, text="Checksum Payload", command=send_checksum_payload )
     checksum_button.pack()
     
     app_flashed_button = tk.Button(window, text="Application Flashed Properly", command=application_flashed_properly_payload)
     app_flashed_button.pack()
     
-   
-    
-    
     display_button = tk.Button(window, text="Display Flashed Properly", command=display)
     display_button.pack()
-    
-    # feedback_button = tk.Button(window, text="feedback lelo", command=listenUltraProxMax)
-    # feedback_button.pack()
-    
-    
     
     global feedback_label
     feedback_label = tk.Label(window, text="", wraplength=300)
@@ -592,11 +531,21 @@ def main():
 
     main_container.pack(fill=tk.BOTH, expand=True)
 
-    listenUltraProxMax()
-    window.mainloop()
+    await listenUltraProxMax()
+    
+    # Run the Tkinter event loop within asyncio
+    while True:
+        try:
+            window.mainloop()
+            break
+        except UnicodeDecodeError:
+            pass
+
+
+
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
     
     
     

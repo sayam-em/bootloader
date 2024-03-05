@@ -416,7 +416,74 @@ if __name__ == "__main__":
     
     
     
-    
+
+# async def flash_firmware(file_label_text, baudrate, progress_label):
+#     # Check file label format
+#     file_prefix = "Selected File: "
+#     if not file_label_text.startswith(file_prefix):
+#         print("Invalid file label format.")
+#         return
+
+#     # Extract file path
+#     file_path = file_label_text[len(file_prefix):]
+#     if not file_path:
+#         print("Please select a file.")
+#         return
+
+#     print(f"File path: {file_path}")  # Debugging print statement
+
+#     try:
+#         # Read file data
+#         with open(file_path, "rb") as f:
+#             file_data = f.read()
+#     except FileNotFoundError:
+#         print(f"File not found: {file_path}")
+#         return
+#     except Exception as e:
+#         print(f"Error opening file: {e}")
+#         return
+
+#     # Open serial port
+#     ser = open_serial_port(baudrate)
+#     if not ser:
+#         print("Serial port not available.")
+#         return
+
+#     print(f"vanilla length of file: {len(file_data)}")
+#     total_frames = math.ceil(len(file_data) / 8)
+#     print(f"After ceiling to the next number {total_frames}")
+
+#     # Loop through frames and send data
+#     progress = 0
+#     frame_num = 1
+#     payload_size = 7  # Adjust payload size according to your protocol
+#     while frame_num <= total_frames:
+#         start_index = (frame_num - 1) * payload_size
+#         end_index = min(start_index + payload_size, len(file_data))
+#         payload = file_data[start_index:end_index]
+
+#         try:
+#             send_payload(ser, 68, 3, frame_num, *payload)
+#             await asyncio.sleep(0.25)  # Delay for stability
+            
+#             # Wait for feedback
+#             # while True:
+#             #     if ser.in_waiting > 0:
+#             #         incoming_data = ser.read(ser.in_waiting)
+#             #         print(f"incoming data: {incoming_data}")
+#             #         await process_feedback(incoming_data)
+#             #         break
+#             # await asyncio.sleep(0.05)  # Wait for feedback
+#         except serial.SerialException as e:
+#             print(f"Error writing to serial port: {e}")
+#             break
+        
+#         frame_num += 1
+#         progress = (frame_num / total_frames) * 100
+#         progress_label.config(text=f"Progress: {progress:.2f}%")
+
+#     print("Firmware flashing completed.")
+#     ser.close()
     
     
     
