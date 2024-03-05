@@ -173,7 +173,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
             #         print(f"incoming data: {incoming_data}")
             #         await process_feedback(incoming_data)
             #         break
-            await asyncio.sleep(0.05)  # Wait for feedback
+            # await asyncio.sleep(0.05)  # Wait for feedback
         except serial.SerialException as e:
             print(f"Error writing to serial port: {e}")
             break
