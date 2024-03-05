@@ -1634,3 +1634,76 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 #     ser.close()
 
 
+
+
+
+
+
+
+
+
+
+async def flash_firmware(file_label_text, baudrate, progress_label):
+    # Check file label format
+    file_prefix = "Selected File: "
+    if not file_label_text.startswith(file_prefix):
+        print("Invalid file label format.")
+        return
+
+    # Extract file path
+    file_path = file_label_text[len(file_prefix):]
+    if not file_path:
+        print("Please select a file.")
+        return
+
+    print(f"File path: {file_path}")  # Debugging print statement
+
+    try:
+        # Read file data
+        with open(file_path, "rb") as f:
+            file_data = f.read()
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+        return
+    except Exception as e:
+        print(f"Error opening file: {e}")
+        return
+
+    # Open serial port
+    ser = open_serial_port(baudrate)
+    if not ser:
+        print("Serial port not available.")
+        return
+
+    print(f"vanilla length of file: {len(file_data)}")
+    total_frames = math.ceil(len(file_data) / 8)
+    print(f"After ceiling to the next number {total_frames}")
+
+    # Loop through frames and send data
+    progress = 0
+    frame_num = 1
+    payload_size = 7  # Adjust payload size according to your protocol
+    for i in range(0, len(file_data), payload_size):
+        payload = file_data[i:i+payload_size]
+        print(payload)
+        print(len(payload))
+
+        try:
+            send_payload(ser, 68, 3, frame_num, *payload)
+            await asyncio.sleep(1)  # Delay for stability
+            
+            # Increment frame number and reset if it reaches 255
+            frame_num += 1
+            if frame_num > 255:
+                frame_num = 1
+            
+            # Calculate progress
+            progress = (i / len(file_data)) * 100
+            progress_label.config(text=f"Progress: {progress:.2f}%")
+        except serial.SerialException as e:
+            print(f"Error writing to serial port: {e}")
+            break
+
+    print("Firmware flashing completed.")
+    ser.close()
+

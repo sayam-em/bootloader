@@ -114,70 +114,6 @@ def send_payload(ser, main_id, sequence_id, *payload_bytes):
     print(f"Payload sent: {payload}")
 
 
-async def flash_firmware(file_label_text, baudrate, progress_label):
-    # Check file label format
-    file_prefix = "Selected File: "
-    if not file_label_text.startswith(file_prefix):
-        print("Invalid file label format.")
-        return
-
-    # Extract file path
-    file_path = file_label_text[len(file_prefix):]
-    if not file_path:
-        print("Please select a file.")
-        return
-
-    print(f"File path: {file_path}")  # Debugging print statement
-
-    try:
-        # Read file data
-        with open(file_path, "rb") as f:
-            file_data = f.read()
-    except FileNotFoundError:
-        print(f"File not found: {file_path}")
-        return
-    except Exception as e:
-        print(f"Error opening file: {e}")
-        return
-
-    # Open serial port
-    ser = open_serial_port(baudrate)
-    if not ser:
-        print("Serial port not available.")
-        return
-
-    print(f"vanilla length of file: {len(file_data)}")
-    total_frames = math.ceil(len(file_data) / 8)
-    print(f"After ceiling to the next number {total_frames}")
-
-    # Loop through frames and send data
-    progress = 0
-    frame_num = 1
-    payload_size = 7  # Adjust payload size according to your protocol
-    for i in range(0, len(file_data), payload_size):
-        payload = file_data[i:i+payload_size]
-        print(payload)
-        print(len(payload))
-
-        try:
-            send_payload(ser, 68, 3, frame_num, *payload)
-            await asyncio.sleep(1)  # Delay for stability
-            
-            # Increment frame number and reset if it reaches 255
-            frame_num += 1
-            if frame_num > 255:
-                frame_num = 1
-            
-            # Calculate progress
-            progress = (i / len(file_data)) * 100
-            progress_label.config(text=f"Progress: {progress:.2f}%")
-        except serial.SerialException as e:
-            print(f"Error writing to serial port: {e}")
-            break
-
-    print("Firmware flashing completed.")
-    ser.close()
-
 
 def transfer_data_payload(ser, main_id, sequence_id, frame_num, *payload_bytes):
     start_time = time.time()
@@ -780,3 +716,49 @@ def send_failed_frame(ser, failed_frame_num, file_data):
         send_payload(ser, 68, 3, failed_frame_num, *payload)
     except Exception as e:
         print(f"Error resending frame {failed_frame_num}: {e}")
+        
+        
+        
+        
+        
+        
+        
+        
+        
+def cal_checksum(*payload_bytes):
+    print(*payload_bytes)
+    checksum = payload_bytes[0]
+    for byte in payload_bytes[1:]:  
+        checksum ^= byte
+    print(checksum)
+    return checksum
+    
+    
+def checksum_payload(*data):
+    ser = open_serial_port(baudrate)
+    if not ser:
+        print("Serial port not available.")
+        return
+    try:
+        send_payload(ser, 68, 4, *data)
+    except serial.SerialException as e:
+        print(f"Error writing to serial port: {e}")
+    print("Checksum payload sent.")
+    ser.close()
+
+
+
+def send_payload(ser, main_id, sequence_id, *payload_bytes):
+    print(f"vanilla payload {payload_bytes}")
+
+    before_check_sum = [main_id, sequence_id, *payload_bytes]
+    
+    checksum = cal_checksum(*before_check_sum)
+    print(f"checksum {checksum}")
+
+    payload = before_check_sum + [checksum] 
+    print(f"after adding checksum {payload}")
+
+    ser.write(payload)
+    print(ser, main_id, sequence_id, *payload_bytes)
+    print(f"Payload sent: {payload}")        
