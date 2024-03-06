@@ -1639,3 +1639,117 @@ async def flash_firmware(file_label_text, baudrate, progress_label, feedback_lab
     finally:
         print("Firmware flashing completed.")
         ser.close()
+        
+        
+        
+        
+# before anything frame number initial one and incrementing 1
+# start index frame increase during the normal flash 0
+# end index frame increase during the normal flash 8
+# before checksum payload in normal operation b'\x008\x00 \x11\x04\x00\x00'
+
+# 0-7
+
+# before checksum payload in normal operation b'\x008\x00 \x11\x04\x00\x00'
+# kya sun rha h? 8
+# Jo bhi data mil rha h b'C\x05\x03\x02\x00\x00\x00G'
+# Sending next requested frame: 2
+# after the next frame thing frame increase after send_next_frame2
+# start index increase after send_next_frame 8
+# end index increase after send_next_frame  16
+# after the whole fiasco paylaod before checksum in send_next_frame b'Q\x04\x00\x00Q\x04\x00\x00'
+# before anything frame number initial one and incrementing 2
+# start index frame increase during the normal flash 8
+# end index frame increase during the normal flash 16
+
+# 8-15
+
+
+# Asynchronous function to flash firmware and listen for feedback
+# async def flash_firmware(file_label_text, baudrate, progress_label):
+#     file_prefix = "Selected File: "
+#     if not file_label_text.startswith(file_prefix):
+#         print("Invalid file label format.")
+#         return
+
+#     file_path = file_label_text[len(file_prefix):]
+#     if not file_path:
+#         print("Please select a file.")
+#         return
+
+#     try:
+#         with open(file_path, "rb") as f:
+#             file_data = f.read()
+#     except FileNotFoundError:
+#         print(f"File not found: {file_path}")
+#         return
+#     except Exception as e:
+#         print(f"Error opening file: {e}")
+#         return
+
+#     ser = open_serial_port(baudrate)
+#     if not ser:
+#         print("Serial port not available.")
+#         return
+
+#     total_frames = math.ceil(len(file_data) / payload_size)
+#     frame_num = 1
+#     try:
+#         while frame_num <= total_frames:
+#             print(f"before anything frame number initial one and icrementing {frame_num}")
+#             start_index = (frame_num - 1) * payload_size
+#             print(f"start index frame increase udring the normal flash {start_index}")
+            
+#             end_index = min(start_index + payload_size, len(file_data))
+#             print(f"start end_index frame increase udring the normal flash {end_index}")
+            
+#             before_payload = file_data[start_index:end_index]
+#             print(f"before checksum payload in normal operation {before_payload}")
+
+#             try:
+#                 send_payload(ser, 68, 3, frame_num, *before_payload)
+#                 await asyncio.sleep(0.5)
+#             except serial.SerialException as e:
+#                 print(f"Error writing to serial port: {e}")
+#                 break
+            
+#             percentage = ((frame_num - 1) / total_frames) * 100
+#             progress_label.config(text=f"Progress: {percentage:.2f}%")
+
+#             # frame_num += 1
+#             await asyncio.sleep(0.5)
+#             if ser.in_waiting >= 8:
+#                 print(f"kya sun rha h? {ser.in_waiting}")
+#                 incoming_data = ser.read(8)
+#                 print(f"Jo bhi data mil rha h {incoming_data}")
+#                 main_id = incoming_data[0]
+#                 sub_id = incoming_data[1]
+#                 feedback_id = incoming_data[2]
+#                 d1 = incoming_data[3]
+#                 d2 = incoming_data[4]
+#                 d3 = incoming_data[5]
+#                 d4 = incoming_data[6]
+#                 checksum = incoming_data[7]
+#                 if main_id == 67:
+#                     if feedback_id == 2:
+#                         print("Repeating erase operation")
+#                         await erase_memory()
+#                     elif feedback_id == 3:
+#                         print(f"Sending next requested frame: {d1}")
+#                         send_next_frame(ser, d1, file_data)
+#                     elif feedback_id == 4:
+#                         print("Resending the failed frame")
+#                         send_failed_frame(ser, d1, file_data)
+#                     elif feedback_id == 5:
+#                         checksum_feedback = cal_checksum(d1, d2, d3, d4)
+#                         print(f"Received checksum: {checksum}, Calculated checksum: {checksum_feedback}")
+#                         if checksum == checksum_feedback:
+#                             print("Checksum verification successful. Proceed with data processing.")
+#                         else:
+#                             print("Checksum verification failed. Resend the frame or take appropriate action.")
+#                     feedback_label.config(text=f"Feedback ID: {feedback_id}")
+#             flash_firmware(file_label_text, baudrate, progress_label)
+
+#     finally:
+#         print("Firmware flashing completed.")
+#         ser.close()

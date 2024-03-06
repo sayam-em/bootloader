@@ -12,7 +12,9 @@ baudrate = 9600
 file_data = None
 feedback_label = None
 payload_size = 8
+global counter
 
+counter = 0
 # Function to get the USB port
 def get_usb_port():
     for port in serial.tools.list_ports.comports():
@@ -104,95 +106,6 @@ def send_payload(ser, main_id, sequence_id, *payload_bytes):
 # def update_feedback(feedback_label, message):
 #     feedback_label.config(text=message)
 
-# Asynchronous function to flash firmware and listen for feedback
-# async def flash_firmware(file_label_text, baudrate, progress_label):
-#     file_prefix = "Selected File: "
-#     if not file_label_text.startswith(file_prefix):
-#         print("Invalid file label format.")
-#         return
-
-#     file_path = file_label_text[len(file_prefix):]
-#     if not file_path:
-#         print("Please select a file.")
-#         return
-
-#     try:
-#         with open(file_path, "rb") as f:
-#             file_data = f.read()
-#     except FileNotFoundError:
-#         print(f"File not found: {file_path}")
-#         return
-#     except Exception as e:
-#         print(f"Error opening file: {e}")
-#         return
-
-#     ser = open_serial_port(baudrate)
-#     if not ser:
-#         print("Serial port not available.")
-#         return
-
-#     total_frames = math.ceil(len(file_data) / payload_size)
-#     frame_num = 1
-#     try:
-#         while frame_num <= total_frames:
-#             print(f"before anything frame number initial one and icrementing {frame_num}")
-#             start_index = (frame_num - 1) * payload_size
-#             print(f"start index frame increase udring the normal flash {start_index}")
-            
-#             end_index = min(start_index + payload_size, len(file_data))
-#             print(f"start end_index frame increase udring the normal flash {end_index}")
-            
-#             before_payload = file_data[start_index:end_index]
-#             print(f"before checksum payload in normal operation {before_payload}")
-
-#             try:
-#                 send_payload(ser, 68, 3, frame_num, *before_payload)
-#                 await asyncio.sleep(0.5)
-#             except serial.SerialException as e:
-#                 print(f"Error writing to serial port: {e}")
-#                 break
-            
-#             percentage = ((frame_num - 1) / total_frames) * 100
-#             progress_label.config(text=f"Progress: {percentage:.2f}%")
-
-#             # frame_num += 1
-#             await asyncio.sleep(0.5)
-#             if ser.in_waiting >= 8:
-#                 print(f"kya sun rha h? {ser.in_waiting}")
-#                 incoming_data = ser.read(8)
-#                 print(f"Jo bhi data mil rha h {incoming_data}")
-#                 main_id = incoming_data[0]
-#                 sub_id = incoming_data[1]
-#                 feedback_id = incoming_data[2]
-#                 d1 = incoming_data[3]
-#                 d2 = incoming_data[4]
-#                 d3 = incoming_data[5]
-#                 d4 = incoming_data[6]
-#                 checksum = incoming_data[7]
-#                 if main_id == 67:
-#                     if feedback_id == 2:
-#                         print("Repeating erase operation")
-#                         await erase_memory()
-#                     elif feedback_id == 3:
-#                         print(f"Sending next requested frame: {d1}")
-#                         send_next_frame(ser, d1, file_data)
-#                     elif feedback_id == 4:
-#                         print("Resending the failed frame")
-#                         send_failed_frame(ser, d1, file_data)
-#                     elif feedback_id == 5:
-#                         checksum_feedback = cal_checksum(d1, d2, d3, d4)
-#                         print(f"Received checksum: {checksum}, Calculated checksum: {checksum_feedback}")
-#                         if checksum == checksum_feedback:
-#                             print("Checksum verification successful. Proceed with data processing.")
-#                         else:
-#                             print("Checksum verification failed. Resend the frame or take appropriate action.")
-#                     feedback_label.config(text=f"Feedback ID: {feedback_id}")
-#             flash_firmware(file_label_text, baudrate, progress_label)
-
-#     finally:
-#         print("Firmware flashing completed.")
-#         ser.close()
-
 async def flash_firmware(file_label_text, baudrate, progress_label):
     file_prefix = "Selected File: "
     if not file_label_text.startswith(file_prefix):
@@ -221,10 +134,14 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 
     total_frames = math.ceil(len(file_data) / payload_size)
     frame_num = 1
+    
+    if frame_num == 255:
+        counter = counter + 1
+
     try:
-        while frame_num <= total_frames:
+        while frame_num + (counter * 255) <= total_frames:
             print(f"before anything frame number initial one and incrementing {frame_num}")
-            start_index = (frame_num - 1) * payload_size
+            start_index = ((frame_num + (counter * 255)) - 1) * payload_size
             print(f"start index frame increase during the normal flash {start_index}")
 
             end_index = min(start_index + payload_size, len(file_data))
@@ -235,7 +152,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 
             try:
                 send_payload(ser, 68, 3, frame_num, *before_payload)
-                await asyncio.sleep(0.5)
+                # await asyncio.sleep(0.5)
             except serial.SerialException as e:
                 print(f"Error writing to serial port: {e}")
                 break
@@ -243,7 +160,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
             percentage = ((frame_num - 1) / total_frames) * 100
             progress_label.config(text=f"Progress: {percentage:.2f}%")
 
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.05)
             if ser.in_waiting >= 8:
                 print(f"kya sun rha h? {ser.in_waiting}")
                 incoming_data = ser.read(8)
@@ -262,10 +179,12 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                         print("Repeating erase operation")
                         await erase_memory()
                     elif feedback_id == 3:
+                        print("--------------------------------------------------------------------------------")
                         print(f"Sending next requested frame: {d1}")
                         send_next_frame(ser, d1, file_data)
                         frame_num = d1
                     elif feedback_id == 4:
+                        print("--------------------------------------------------------------------------------")
                         print("Resending the failed frame")
                         send_failed_frame(ser, d1, file_data)
                     elif feedback_id == 5:
@@ -277,7 +196,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                             print("Checksum verification failed. Resend the frame or take appropriate action.")
                     # feedback_label.config(text=f"Feedback ID: {feedback_id}")
             else:
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.05)
                 continue
             
             # frame_num += 1
@@ -401,7 +320,7 @@ def display():
 def send_next_frame(ser, frame_num, file_data):
     # frame_num += 1
     print(f"after the next frame thing frame increase after send_next_frame{frame_num}")
-    start_index = (frame_num - 1) * payload_size
+    start_index = (frame_num + (counter * 255) - 1) * payload_size
     print(f"start index increase after send_next_frame {start_index}")
     
     end_index = min(start_index + payload_size, len(file_data))
