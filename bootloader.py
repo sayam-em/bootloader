@@ -317,8 +317,7 @@ def display():
     ser.close()
 
 # Function to send next frame
-def send_next_frame(ser, frame_num, file_data):
-    global counter
+def send_next_frame(ser, frame_num, file_data,counter):
     print(f"send_next_frame wala counter: {counter}")
     # frame_num += 1
     print(f"after the next frame thing frame increase after send_next_frame{frame_num}")
