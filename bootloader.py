@@ -97,12 +97,12 @@ def send_payload(ser, main_id, sequence_id, *payload_bytes):
     ser.write(payload)
 
 # Function to update progress
-def update_progress(progress_label, progress):
-    progress_label.config(text=f"Progress: {progress:.2f}%")
+# def update_progress(progress_label, progress):
+#     progress_label.config(text=f"Progress: {progress:.2f}%")
 
 # Function to update feedback
-def update_feedback(feedback_label, message):
-    feedback_label.config(text=message)
+# def update_feedback(feedback_label, message):
+#     feedback_label.config(text=message)
 
 # Asynchronous function to flash firmware and listen for feedback
 # async def flash_firmware(file_label_text, baudrate, progress_label):
@@ -274,7 +274,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                             print("Checksum verification successful. Proceed with data processing.")
                         else:
                             print("Checksum verification failed. Resend the frame or take appropriate action.")
-                    feedback_label.config(text=f"Feedback ID: {feedback_id}")
+                    # feedback_label.config(text=f"Feedback ID: {feedback_id}")
             else:
                 await asyncio.sleep(0.1)
                 continue
@@ -398,7 +398,7 @@ def display():
 
 # Function to send next frame
 def send_next_frame(ser, frame_num, file_data):
-    frame_num += 1
+    # frame_num += 1
     print(f"after the next frame thing frame increase after send_next_frame{frame_num}")
     start_index = (frame_num - 1) * payload_size
     print(f"start index increase after send_next_frame {start_index}")
@@ -480,8 +480,8 @@ async def main():
     display_button = tk.Button(window, text="Display Flashed Properly", command=display)
     display_button.pack()
     
-    feedback_label = tk.Label(window, text="", wraplength=300)
-    feedback_label.pack()
+    # feedback_label = tk.Label(window, text="", wraplength=300)
+    # feedback_label.pack()
     
     footer_frame = tk.Frame(main_container)
     footer_label = tk.Label(footer_frame, text="EMotorad", foreground="white", background="green", width=100)
