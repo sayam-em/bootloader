@@ -12,6 +12,8 @@ baudrate = 9600
 file_data = None
 feedback_label = None
 payload_size = 8
+counter = 0
+
 # Function to get the USB port
 def get_usb_port():
     for port in serial.tools.list_ports.comports():
@@ -134,6 +136,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
     frame_num = 1
     if frame_num == 255:
         counter +=  1
+    print(f"flash_firware wala counter: {counter}")
 
     try:
         while frame_num + (counter * 255) <= total_frames:
@@ -316,6 +319,7 @@ def display():
 # Function to send next frame
 def send_next_frame(ser, frame_num, file_data):
     global counter
+    print(f"send_next_frame wala counter: {counter}")
     # frame_num += 1
     print(f"after the next frame thing frame increase after send_next_frame{frame_num}")
     start_index = (frame_num + (counter * 255) - 1) * payload_size
