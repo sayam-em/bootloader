@@ -264,6 +264,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                     elif feedback_id == 3:
                         print(f"Sending next requested frame: {d1}")
                         send_next_frame(ser, d1, file_data)
+                        frame_num = d1
                     elif feedback_id == 4:
                         print("Resending the failed frame")
                         send_failed_frame(ser, d1, file_data)
@@ -279,7 +280,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                 await asyncio.sleep(0.1)
                 continue
             
-            frame_num += 1
+            # frame_num += 1
 
     finally:
         print("Firmware flashing completed.")
