@@ -155,7 +155,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
             percentage = ((frame_num - 1) / total_frames) * 100
             progress_label.config(text=f"Progress: {percentage:.2f}%")
 
-            frame_num += 1
+            # frame_num += 1
             await asyncio.sleep(0.5)
             if ser.in_waiting >= 8:
                 print(f"kya sun rha h? {ser.in_waiting}")
@@ -169,7 +169,6 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                 d3 = incoming_data[5]
                 d4 = incoming_data[6]
                 checksum = incoming_data[7]
-
                 if main_id == 67:
                     if feedback_id == 2:
                         print("Repeating erase operation")
@@ -188,10 +187,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                         else:
                             print("Checksum verification failed. Resend the frame or take appropriate action.")
                     feedback_label.config(text=f"Feedback ID: {feedback_id}")
-            else:
-                if frame_num > total_frames:
-                    break
-                await asyncio.sleep(0.1)
+            flash_firmware(file_label_text, baudrate, progress_label)
 
     finally:
         print("Firmware flashing completed.")
