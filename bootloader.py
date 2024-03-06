@@ -12,9 +12,6 @@ baudrate = 9600
 file_data = None
 feedback_label = None
 payload_size = 8
-global counter
-
-counter = 0
 # Function to get the USB port
 def get_usb_port():
     for port in serial.tools.list_ports.comports():
@@ -107,6 +104,7 @@ def send_payload(ser, main_id, sequence_id, *payload_bytes):
 #     feedback_label.config(text=message)
 
 async def flash_firmware(file_label_text, baudrate, progress_label):
+    global counter
     file_prefix = "Selected File: "
     if not file_label_text.startswith(file_prefix):
         print("Invalid file label format.")
@@ -134,9 +132,8 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 
     total_frames = math.ceil(len(file_data) / payload_size)
     frame_num = 1
-    
     if frame_num == 255:
-        counter = counter + 1
+        counter +=  1
 
     try:
         while frame_num + (counter * 255) <= total_frames:
@@ -181,7 +178,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                     elif feedback_id == 3:
                         print("--------------------------------------------------------------------------------")
                         print(f"Sending next requested frame: {d1}")
-                        send_next_frame(ser, d1, file_data)
+                        send_next_frame(ser, d1, file_data, counter)
                         frame_num = d1
                     elif feedback_id == 4:
                         print("--------------------------------------------------------------------------------")
@@ -318,6 +315,7 @@ def display():
 
 # Function to send next frame
 def send_next_frame(ser, frame_num, file_data):
+    global counter
     # frame_num += 1
     print(f"after the next frame thing frame increase after send_next_frame{frame_num}")
     start_index = (frame_num + (counter * 255) - 1) * payload_size
