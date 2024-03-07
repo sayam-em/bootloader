@@ -76,15 +76,12 @@ def cal_checksum(*payload_bytes):
 
 
 def checksum(ser, main_id, sequence_id, *payload_bytes):
-    before_check_sum = [main_id, sequence_id, *payload_bytes]
-    checksum = cal_checksum(*before_check_sum)
-    payload = before_check_sum + [checksum] 
     ser = open_serial_port(baudrate)
     if not ser:
         print("Serial port not available.")
         return
     try:
-        send_payload(ser, 68, 4, *payload)
+        send_payload(ser, 68, 4, *payload_bytes)
     except serial.SerialException as e:
         print(f"Error writing to serial port: {e}")
     print("Checksum payload sent.")

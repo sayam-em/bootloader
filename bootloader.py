@@ -134,21 +134,31 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 
     total_frames = math.ceil(len(file_data) / payload_size)
     frame_num = 1
-    if frame_num == 255:
-        counter +=  1
-    print(f"flash_firware wala counter: {counter}")
+
 
     try:
         while frame_num + (counter * 255) <= total_frames:
+            if frame_num == 255:
+                counter +=  1
+            print(f"flash_firware wala counter: {counter}")
+            print("--------------------------------------------------------------------------------")
+            
+            print(f"while wala gyaan: {frame_num + (counter * 255)}")
+            print("--------------------------------------------------------------------------------")
             print(f"before anything frame number initial one and incrementing {frame_num}")
+            print("--------------------------------------------------------------------------------")
             start_index = ((frame_num + (counter * 255)) - 1) * payload_size
+            
             print(f"start index frame increase during the normal flash {start_index}")
+            print("--------------------------------------------------------------------------------")
 
             end_index = min(start_index + payload_size, len(file_data))
             print(f"end index frame increase during the normal flash {end_index}")
+            print("--------------------------------------------------------------------------------")
 
             before_payload = file_data[start_index:end_index]
             print(f"before checksum payload in normal operation {before_payload}")
+            print("--------------------------------------------------------------------------------")
 
             try:
                 send_payload(ser, 68, 3, frame_num, *before_payload)
@@ -157,7 +167,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                 print(f"Error writing to serial port: {e}")
                 break
 
-            percentage = ((frame_num - 1) / total_frames) * 100
+            percentage = ((frame_num + (counter * 255)) / total_frames) * 100
             progress_label.config(text=f"Progress: {percentage:.2f}%")
 
             await asyncio.sleep(0.05)
@@ -169,6 +179,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                 sub_id = incoming_data[1]
                 feedback_id = incoming_data[2]
                 d1 = incoming_data[3]
+                print(f"d1 lelo frands {d1}")
                 d2 = incoming_data[4]
                 d3 = incoming_data[5]
                 d4 = incoming_data[6]
@@ -189,8 +200,10 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                         send_failed_frame(ser, d1, file_data)
                     elif feedback_id == 5:
                         checksum_feedback = cal_checksum(d1, d2, d3, d4)
+                        print("--------------------------------------------------------------------------------")
                         print(f"Received checksum: {checksum}, Calculated checksum: {checksum_feedback}")
                         if checksum == checksum_feedback:
+                            print("--------------------------------------------------------------------------------")
                             print("Checksum verification successful. Proceed with data processing.")
                         else:
                             print("Checksum verification failed. Resend the frame or take appropriate action.")
