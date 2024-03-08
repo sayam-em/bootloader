@@ -17,7 +17,7 @@ counter = 0
 # Function to get the USB port
 def get_usb_port():
     for port in serial.tools.list_ports.comports():
-        if 'COM5' in port.description: 
+        if 'COM3' in port.description: 
             return port.device
     return None
 
@@ -134,12 +134,13 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 
     total_frames = math.ceil(len(file_data) / payload_size)
     frame_num = 1
-    if frame_num == 255:
-        counter +=  1
-    print(f"flash_firware wala counter: {counter}")
+
 
     try:
-        while frame_num + (counter * 255) <= total_frames:
+        while frame_num + (counter * 255) < total_frames:
+            if frame_num == 255:
+                counter +=  1
+            print(f"flash_firware wala counter: {counter}")
             print(f"before anything frame number initial one and incrementing {frame_num}")
             start_index = ((frame_num + (counter * 255)) - 1) * payload_size
             print(f"start index frame increase during the normal flash {start_index}")
