@@ -141,7 +141,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
         while FrameCounter <= total_frames:
             print(f"flash_firware wala counter: {counter}")
             print(f"before anything frame number initial one and incrementing {frame_num}")
-            start_index = (FrameCounter  - 1) * payload_size
+            start_index = (FrameCounter) * payload_size
             print(f"start index frame increase during the normal flash {start_index}")
 
             end_index = min(start_index + payload_size, len(file_data))
@@ -326,7 +326,7 @@ def send_next_frame(ser, frame_num, file_data,d1):
     print(f"d1: {d1}")
     # frame_num += 1
     print(f"after the next frame thing frame increase after send_next_frame{frame_num}")
-    start_index = (frame_num - 1) * payload_size
+    start_index = (frame_num) * payload_size
     print(f"start index increase after send_next_frame {start_index}")
     
     end_index = min(start_index + payload_size, len(file_data))
@@ -343,7 +343,7 @@ def send_next_frame(ser, frame_num, file_data,d1):
 
 # Function to send failed frame
 def send_failed_frame(ser, failed_frame_num, file_data, d1):
-    start_index = (failed_frame_num - 1) * payload_size
+    start_index = (failed_frame_num ) * payload_size
     print(f"after the next frame thing frame increase after send_failed_frame{failed_frame_num}")
     
     end_index = min(start_index + payload_size, len(file_data))
