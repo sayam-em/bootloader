@@ -17,7 +17,7 @@ counter = 0
 # Function to get the USB port
 def get_usb_port():
     for port in serial.tools.list_ports.comports():
-        if 'COM3' in port.description: 
+        if 'COM5' in port.description: 
             return port.device
     return None
 
@@ -134,15 +134,14 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 
     total_frames = math.ceil(len(file_data) / payload_size)
     frame_num = 1
+    FrameCounter = 1
 
 
     try:
-        while frame_num + (counter * 255) < total_frames:
-            if frame_num == 255:
-                counter +=  1
+        while FrameCounter <= total_frames:
             print(f"flash_firware wala counter: {counter}")
             print(f"before anything frame number initial one and incrementing {frame_num}")
-            start_index = ((frame_num + (counter * 255)) - 1) * payload_size
+            start_index = (FrameCounter  - 1) * payload_size
             print(f"start index frame increase during the normal flash {start_index}")
 
             end_index = min(start_index + payload_size, len(file_data))
@@ -158,7 +157,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                 print(f"Error writing to serial port: {e}")
                 break
 
-            percentage = ((frame_num - 1) / total_frames) * 100
+            percentage = ((FrameCounter - 1) / total_frames) * 100
             progress_label.config(text=f"Progress: {percentage:.2f}%")
 
             await asyncio.sleep(0.05)
@@ -180,14 +179,19 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                         print("Repeating erase operation")
                         await erase_memory()
                     elif feedback_id == 3:
+                        FrameCounter = d4
+                        FrameCounter = (FrameCounter << 8) | d3
+                        FrameCounter = (FrameCounter << 8) | d2
+                        print(f"frame counter {FrameCounter}")
+                
                         print("--------------------------------------------------------------------------------")
                         print(f"Sending next requested frame: {d1}")
-                        send_next_frame(ser, d1, file_data, counter)
+                        send_next_frame(ser, FrameCounter, file_data, d1)
                         frame_num = d1
                     elif feedback_id == 4:
                         print("--------------------------------------------------------------------------------")
                         print("Resending the failed frame")
-                        send_failed_frame(ser, d1, file_data)
+                        send_failed_frame(ser, FrameCounter, file_data, d1)
                     elif feedback_id == 5:
                         checksum_feedback = cal_checksum(d1, d2, d3, d4)
                         print(f"Received checksum: {checksum}, Calculated checksum: {checksum_feedback}")
@@ -318,11 +322,11 @@ def display():
     ser.close()
 
 # Function to send next frame
-def send_next_frame(ser, frame_num, file_data,counter):
-    print(f"send_next_frame wala counter: {counter}")
+def send_next_frame(ser, frame_num, file_data,d1):
+    print(f"d1: {d1}")
     # frame_num += 1
     print(f"after the next frame thing frame increase after send_next_frame{frame_num}")
-    start_index = (frame_num + (counter * 255) - 1) * payload_size
+    start_index = (frame_num - 1) * payload_size
     print(f"start index increase after send_next_frame {start_index}")
     
     end_index = min(start_index + payload_size, len(file_data))
@@ -332,13 +336,13 @@ def send_next_frame(ser, frame_num, file_data,counter):
     print(f"after the whole fiasco paylaod before checksum in send_next_frame {payload}")
 
     try:
-        send_payload(ser, 68, 3, frame_num, *payload)
+        send_payload(ser, 68, 3, d1, *payload)
         
     except Exception as e:
         print(f"Error sending frame {frame_num}: {e}")
 
 # Function to send failed frame
-def send_failed_frame(ser, failed_frame_num, file_data):
+def send_failed_frame(ser, failed_frame_num, file_data, d1):
     start_index = (failed_frame_num - 1) * payload_size
     print(f"after the next frame thing frame increase after send_failed_frame{failed_frame_num}")
     
@@ -349,7 +353,7 @@ def send_failed_frame(ser, failed_frame_num, file_data):
     print(f"after the whole fiasco paylaod before checksum send_failed_frame {payload}")
 
     try:
-        send_payload(ser, 68, 3, failed_frame_num, *payload)
+        send_payload(ser, 68, 3, d1, *payload)
     except Exception as e:
         print(f"Error resending frame {failed_frame_num}: {e}")
 
