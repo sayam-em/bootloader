@@ -138,11 +138,13 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 
     try:
         while frame_num + (counter * 255) < total_frames:
-            if frame_num == 255:
-                counter +=  1
+            print(f"kuch toh ho rha h {frame_num + (counter * 255)}")
             print(f"flash_firware wala counter: {counter}")
             print(f"before anything frame number initial one and incrementing {frame_num}")
-            start_index = ((frame_num + (counter * 255)) - 1) * payload_size
+            if counter == 0 :
+                start_index = ((frame_num + (counter * 255)) - 1) * payload_size
+            else:
+                start_index = ((frame_num + (counter * 255)) - 1) * payload_size
             print(f"start index frame increase during the normal flash {start_index}")
 
             end_index = min(start_index + payload_size, len(file_data))
@@ -174,7 +176,8 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                 d3 = incoming_data[5]
                 d4 = incoming_data[6]
                 checksum = incoming_data[7]
-
+                if d1 == 1 and frame_num == 255:
+                    counter +=  1
                 if main_id == 67:
                     if feedback_id == 2:
                         print("Repeating erase operation")
@@ -187,7 +190,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                     elif feedback_id == 4:
                         print("--------------------------------------------------------------------------------")
                         print("Resending the failed frame")
-                        send_failed_frame(ser, d1, file_data)
+                        send_next_frame(ser, d1, file_data, counter)
                     elif feedback_id == 5:
                         checksum_feedback = cal_checksum(d1, d2, d3, d4)
                         print(f"Received checksum: {checksum}, Calculated checksum: {checksum_feedback}")
@@ -322,7 +325,10 @@ def send_next_frame(ser, frame_num, file_data,counter):
     print(f"send_next_frame wala counter: {counter}")
     # frame_num += 1
     print(f"after the next frame thing frame increase after send_next_frame{frame_num}")
-    start_index = (frame_num + (counter * 255) - 1) * payload_size
+    if counter == 0:
+        start_index = ((frame_num + (counter * 255)) - 1) * payload_size
+    else :
+        start_index = ((frame_num + (counter * 255)) - 1) * payload_size
     print(f"start index increase after send_next_frame {start_index}")
     
     end_index = min(start_index + payload_size, len(file_data))
@@ -332,6 +338,7 @@ def send_next_frame(ser, frame_num, file_data,counter):
     print(f"after the whole fiasco paylaod before checksum in send_next_frame {payload}")
 
     try:
+        print(f"dedo bhai {ser, 68, 3, frame_num, *payload}")
         send_payload(ser, 68, 3, frame_num, *payload)
         
     except Exception as e:
@@ -349,6 +356,7 @@ def send_failed_frame(ser, failed_frame_num, file_data):
     print(f"after the whole fiasco paylaod before checksum send_failed_frame {payload}")
 
     try:
+        print(f"fail hogya bhai {ser, 68, 3, failed_frame_num, *payload}")
         send_payload(ser, 68, 3, failed_frame_num, *payload)
     except Exception as e:
         print(f"Error resending frame {failed_frame_num}: {e}")
