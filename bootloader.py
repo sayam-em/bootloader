@@ -167,7 +167,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
             percentage = ((frame_num + (counter * 255)) / total_frames) * 100
             progress_label.config(text=f"Progress: {percentage:.2f}%")
 
-            await asyncio.sleep(0.02)
+            await asyncio.sleep(0.03)
             if ser.in_waiting >= 8:
                 print(f"kya sun rha h? {ser.in_waiting}")
                 incoming_data = ser.read(8)
