@@ -72,7 +72,11 @@ def cal_checksum(*payload_bytes):
     for byte in payload_bytes[1:]:  
         checksum ^= byte
     # print(checksum)
-    return checksum
+    if checksum == 0:
+        checksum = 1
+        return checksum
+    else:
+        return checksum 
 
 # Function to send checksum payload
 def checksum(ser, main_id, sequence_id, *payload_bytes):
@@ -160,10 +164,10 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                 print(f"Error writing to serial port: {e}")
                 break
 
-            percentage = ((frame_num - 1) / total_frames) * 100
+            percentage = ((frame_num + (counter * 255)) / total_frames) * 100
             progress_label.config(text=f"Progress: {percentage:.2f}%")
 
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.02)
             if ser.in_waiting >= 8:
                 print(f"kya sun rha h? {ser.in_waiting}")
                 incoming_data = ser.read(8)
@@ -200,7 +204,8 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                             print("Checksum verification failed. Resend the frame or take appropriate action.")
                     # feedback_label.config(text=f"Feedback ID: {feedback_id}")
             else:
-                await asyncio.sleep(0.05)
+                print("nothing happend")
+                await asyncio.sleep(0.02)
                 continue
             
             # frame_num += 1
