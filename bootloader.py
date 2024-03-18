@@ -17,7 +17,7 @@ counter = 0
 # Function to get the USB port
 def get_usb_port():
     for port in serial.tools.list_ports.comports():
-        if 'COM3' in port.description: 
+        if 'COM4' in port.description: 
             return port.device
     return None
 
@@ -141,7 +141,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 
 
     try:
-        while frame_num + (counter * 255) < total_frames:
+        while frame_num + (counter * 255) <= total_frames:
             print(f"kuch toh ho rha h {frame_num + (counter * 255)}")
             print(f"flash_firware wala counter: {counter}")
             print(f"before anything frame number initial one and incrementing {frame_num}")
@@ -151,10 +151,15 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                 start_index = ((frame_num + (counter * 255)) - 1) * payload_size
             print(f"start index frame increase during the normal flash {start_index}")
 
-            end_index = min(start_index + payload_size, len(file_data))
+            end_index = min(start_index + payload_size, (len(file_data)))
             print(f"end index frame increase during the normal flash {end_index}")
 
             before_payload = file_data[start_index:end_index]
+            print(f"before checksum payload in normal operation {before_payload}")
+
+            if len(before_payload) < 8:
+                before_payload += bytes([0xFF] * (8 - len(before_payload)))
+
             print(f"before checksum payload in normal operation {before_payload}")
 
             try:
@@ -167,7 +172,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
             percentage = ((frame_num + (counter * 255)) / total_frames) * 100
             progress_label.config(text=f"Progress: {percentage:.2f}%")
 
-            await asyncio.sleep(0.03)
+            await asyncio.sleep(0.1)
             if ser.in_waiting >= 8:
                 print(f"kya sun rha h? {ser.in_waiting}")
                 incoming_data = ser.read(8)
@@ -341,6 +346,9 @@ def send_next_frame(ser, frame_num, file_data,counter):
     
     payload = file_data[start_index:end_index]
     print(f"after the whole fiasco paylaod before checksum in send_next_frame {payload}")
+
+    if len(payload) < 8:
+                payload += bytes([0xFF] * (8 - len(payload)))
 
     try:
         print(f"dedo bhai {ser, 68, 3, frame_num, *payload}")
