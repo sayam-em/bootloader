@@ -11,7 +11,7 @@ import time
 baudrate = 9600
 file_data = None
 feedback_label = None
-payload_size = 8
+payload_size = 16
 counter = 0
 
 # Function to get the USB port
@@ -157,8 +157,8 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
             before_payload = file_data[start_index:end_index]
             print(f"before checksum payload in normal operation {before_payload}")
 
-            if len(before_payload) < 8:
-                before_payload += bytes([0xFF] * (8 - len(before_payload)))
+            if len(before_payload) < 16:
+                before_payload += bytes([0xFF] * (16 - len(before_payload)))
 
             print(f"before checksum payload in normal operation {before_payload}")
 
@@ -172,7 +172,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
             percentage = ((frame_num + (counter * 255)) / total_frames) * 100
             progress_label.config(text=f"Progress: {percentage:.2f}%")
 
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.08)
             if ser.in_waiting >= 8:
                 print(f"kya sun rha h? {ser.in_waiting}")
                 incoming_data = ser.read(8)
@@ -210,7 +210,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                     # feedback_label.config(text=f"Feedback ID: {feedback_id}")
             else:
                 print("nothing happend")
-                await asyncio.sleep(0.02)
+                #await asyncio.sleep(0.02)
                 continue
             
             # frame_num += 1
@@ -232,7 +232,7 @@ def reset_firmware():
         print("Serial port not available.")
         return
     try:
-        send_payload(ser, 68, 6, 90, 90, 90, 90, 90, 90, 90, 90, 90)
+        send_payload(ser, 68, 6, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90)
     except serial.SerialException as e:
         print(f"Error writing to serial port: {e}")
     print("Firmware reset completed.")
@@ -279,7 +279,7 @@ def program_size(file_label):
             return
         if ser:
             try:
-                send_payload(ser, 68, 2, size_byte_1, size_byte_2, size_byte_3, size_byte_4, 90, 90, 90, 90)
+                send_payload(ser, 68, 2, size_byte_1, size_byte_2, size_byte_3, size_byte_4, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90)
             except serial.SerialException as e:
                 print(f"Error writing to serial port: {e}")
             finally:
@@ -294,7 +294,7 @@ def erase_memory():
         print("Serial port not available.")
         return
     try:
-            send_payload(ser, 68, 1, 90, 90, 90, 90, 90, 90, 90, 90, 90)
+            send_payload(ser, 68, 1, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90)
     except serial.SerialException as e:
         print(f"Error writing to serial port: {e}")
     print("Memory erase command sent.")
@@ -309,7 +309,7 @@ def application_flashed_properly_payload():
         return
     
     try:
-        send_payload(ser, 68, 7, 90, 90, 90, 90, 90, 90, 90, 90, 90)
+        send_payload(ser, 68, 7, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90)
     except serial.SerialException as e:
         print(f"Error writing to serial port: {e}")
     finally:
@@ -347,8 +347,8 @@ def send_next_frame(ser, frame_num, file_data,counter):
     payload = file_data[start_index:end_index]
     print(f"after the whole fiasco paylaod before checksum in send_next_frame {payload}")
 
-    if len(payload) < 8:
-                payload += bytes([0xFF] * (8 - len(payload)))
+    if len(payload) < 16:
+                payload += bytes([0xFF] * (16 - len(payload)))
 
     try:
         print(f"dedo bhai {ser, 68, 3, frame_num, *payload}")
