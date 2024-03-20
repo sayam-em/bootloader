@@ -164,8 +164,6 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
     except serial.SerialException as e:
         print(f"Error writing to serial port: {e}")
 
-    percentage = ((frame_num + (counter * 255)) / total_frames) * 100
-    progress_label.config(text=f"Progress: {percentage:.2f}%")
 
 
     try:
@@ -183,6 +181,11 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                 d3 = incoming_data[5]
                 d4 = incoming_data[6]
                 checksum = incoming_data[7]
+
+                percentage = ((frame_num + (counter * 255)) / total_frames) * 100
+                progress_label.config(text=f"Progress: {percentage:.2f}%")
+
+
                 if d1 == 1 and frame_num == 255:
                     counter +=  1
                 if main_id == 67:
@@ -204,6 +207,7 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                         if checksum == checksum_feedback:
                             print("Checksum verification successful. Proceed with data processing.")
                         else:
+                            
                             print("Checksum verification failed. Resend the frame or take appropriate action.")
                     # feedback_label.config(text=f"Feedback ID: {feedback_id}")
             ##   print("nothing happend")
