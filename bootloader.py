@@ -403,26 +403,27 @@ async def main():
     button_import.pack(pady=10)
     progress_label = tk.Label(container_frame, text="Progress: 0.00%", foreground="black", background="white")
     progress_label.pack()
+
+    erase_button = tk.Button(window, text="Erase Memory", command=erase_memory)
+    erase_button.pack()
+
+    program_size_button = tk.Button(window, text="Program Size", command=lambda: program_size(file_label.cget("text")))
+    program_size_button.pack()
+
     flash_button = tk.Button(window, text="Flash Firmware", command=lambda: flash_firmware_thread(file_label.cget("text"), 9600, progress_label))
     flash_button.pack()
     
-    reset_button = tk.Button(window, text="Reset Firmware", command=reset_firmware)
-    reset_button.pack()
-    
-    erase_button = tk.Button(window, text="Erase Memory", command=erase_memory)
-    erase_button.pack()
-    
-    program_size_button = tk.Button(window, text="Program Size", command=lambda: program_size(file_label.cget("text")))
-    program_size_button.pack()
-    
-    checksum_button = tk.Button(window, text="Checksum Payload", command=checksum)
+    checksum_button = tk.Button(window, text="Firmware Validation", command=checksum)
     checksum_button.pack()
-    
+
     app_flashed_button = tk.Button(window, text="Application Flashed Properly", command=application_flashed_properly_payload)
     app_flashed_button.pack()
-    
-    display_button = tk.Button(window, text="Display Flashed Properly", command=display)
+
+    display_button = tk.Button(window, text="Jump To Bootloader", command=display)
     display_button.pack()
+
+    reset_button = tk.Button(window, text="Reset Firmware", command=reset_firmware)
+    reset_button.pack()
     
     # feedback_label = tk.Label(window, text="", wraplength=300)
     # feedback_label.pack()
