@@ -138,42 +138,40 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
 
     total_frames = math.ceil(len(file_data) / payload_size)
     frame_num = 1
+    print(f"kuch toh ho rha h {frame_num + (counter * 255)}")
+    print(f"flash_firware wala counter: {counter}")
+    print(f"before anything frame number initial one and incrementing {frame_num}")
+    if counter == 0 :
+        start_index = ((frame_num + (counter * 255)) - 1) * payload_size
+    else:
+        start_index = ((frame_num + (counter * 255)) - 1) * payload_size
+    print(f"start index frame increase during the normal flash {start_index}")
+
+    end_index = min(start_index + payload_size, (len(file_data)))
+    print(f"end index frame increase during the normal flash {end_index}")
+
+    before_payload = file_data[start_index:end_index]
+    print(f"before checksum payload in normal operation {before_payload}")
+
+    if len(before_payload) < 16:
+        before_payload += bytes([0xFF] * (16 - len(before_payload)))
+
+    print(f"before checksum payload in normal operation {before_payload}")
+
+    try:
+        send_payload(ser, 68, 3, frame_num, *before_payload)
+        # await asyncio.sleep(0.5)
+    except serial.SerialException as e:
+        print(f"Error writing to serial port: {e}")
+
+    percentage = ((frame_num + (counter * 255)) / total_frames) * 100
+    progress_label.config(text=f"Progress: {percentage:.2f}%")
 
 
     try:
         while frame_num + (counter * 255) <= total_frames:
-            print(f"kuch toh ho rha h {frame_num + (counter * 255)}")
-            print(f"flash_firware wala counter: {counter}")
-            print(f"before anything frame number initial one and incrementing {frame_num}")
-            if counter == 0 :
-                start_index = ((frame_num + (counter * 255)) - 1) * payload_size
-            else:
-                start_index = ((frame_num + (counter * 255)) - 1) * payload_size
-            print(f"start index frame increase during the normal flash {start_index}")
-
-            end_index = min(start_index + payload_size, (len(file_data)))
-            print(f"end index frame increase during the normal flash {end_index}")
-
-            before_payload = file_data[start_index:end_index]
-            print(f"before checksum payload in normal operation {before_payload}")
-
-            if len(before_payload) < 16:
-                before_payload += bytes([0xFF] * (16 - len(before_payload)))
-
-            print(f"before checksum payload in normal operation {before_payload}")
-
-            try:
-                send_payload(ser, 68, 3, frame_num, *before_payload)
-                # await asyncio.sleep(0.5)
-            except serial.SerialException as e:
-                print(f"Error writing to serial port: {e}")
-                break
-
-            percentage = ((frame_num + (counter * 255)) / total_frames) * 100
-            progress_label.config(text=f"Progress: {percentage:.2f}%")
-
-            await asyncio.sleep(0.08)
-            if ser.in_waiting >= 8:
+            #await asyncio.sleep(0.08)
+            #if ser.in_waiting >= 8:
                 print(f"kya sun rha h? {ser.in_waiting}")
                 incoming_data = ser.read(8)
                 print(f"Jo bhi data mil rha h {incoming_data}")
@@ -208,10 +206,9 @@ async def flash_firmware(file_label_text, baudrate, progress_label):
                         else:
                             print("Checksum verification failed. Resend the frame or take appropriate action.")
                     # feedback_label.config(text=f"Feedback ID: {feedback_id}")
-            else:
-                print("nothing happend")
+            ##   print("nothing happend")
                 #await asyncio.sleep(0.02)
-                continue
+            ##    continue
             
             # frame_num += 1
 
