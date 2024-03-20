@@ -17,10 +17,9 @@ counter = 0
 # Function to get the USB port
 def get_usb_port():
     for port in serial.tools.list_ports.comports():
-        if 'COM4' in port.description: 
+        if 'Silicon Labs CP210x USB to UART Bridge' in port.description:
             return port.device
     return None
-
 # Function to open the serial port
 def open_serial_port(baudrate):
     try:
