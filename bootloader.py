@@ -279,7 +279,7 @@ def program_size(file_label):
             return
         if ser:
             try:
-                send_payload(ser, 68, 2, size_byte_1, size_byte_2, size_byte_3, size_byte_4, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90)
+                send_payload(ser, 68, 2, size_byte_1, size_byte_2, size_byte_3, size_byte_4, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90,90)
             except serial.SerialException as e:
                 print(f"Error writing to serial port: {e}")
             finally:
